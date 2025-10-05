@@ -5,8 +5,8 @@ Werkzeug==3.0.1
 google-generativeai==0.8.3
 python-dotenv==1.0.0
 Pillow==11.0.0
-SpeechRecognition==3.10.4
 pydub==0.25.1
+audioop-lts==0.2.1
 vosk==0.3.44
 librosa==0.10.2.post1
 scikit-learn==1.5.2

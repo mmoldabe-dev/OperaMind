@@ -2,9 +2,10 @@ import os
 import json
 import math
 import re
-import speech_recognition as sr
+
 from pydub import AudioSegment
 from pathlib import Path
+import speech_recognition as sr
 
 try:
     from vosk import Model as VoskModel, KaldiRecognizer
