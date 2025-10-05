@@ -1,64 +1,129 @@
-{% extends "base.html" %}
-
+{% extends 'base.html' %}
 {% block title %}История разговоров - OperaMind{% endblock %}
-
 {% block content %}
-<div class="card">
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px;">
+
+<div class="card" style="animation:fadeInUp .4s ease;">
+    <div class="card-header" style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:var(--space-6);margin-bottom:var(--space-4);">
         <div>
-            <h2 style="color: #2c3e50; margin-bottom: 5px;">📋 История разговоров</h2>
-            <p style="color: #7f8c8d;">Все загруженные аудиофайлы</p>
+            <h2 class="card-title" style="display:flex;align-items:center;gap:var(--space-3);"><i class="fas fa-headset" style="color:var(--primary);"></i> Мои разговоры</h2>
+            <div class="card-subtitle">Все ваши загруженные и обработанные аудиофайлы</div>
         </div>
-        <a href="{{ url_for('index') }}" class="btn">+ Загрузить новый</a>
     </div>
-    
+
     {% if conversations %}
-    <div style="overflow-x: auto;">
-        <table style="width: 100%; border-collapse: collapse;">
+    {% set total = conversations|length %}
+    {% set completed = conversations|selectattr('status','equalto','completed')|list|length %}
+    {% set errors = conversations|selectattr('status','equalto','error')|list|length %}
+    {% set analyzing = conversations|selectattr('status','equalto','analyzing')|list|length %}
+    {% set transcribing = conversations|selectattr('status','equalto','transcribing')|list|length %}
+    {% set pending = conversations|selectattr('status','equalto','pending')|list|length %}
+
+    <div class="admin-grid" style="--cols:repeat(auto-fit,minmax(140px,1fr));margin-top:0;">
+        <div class="stat-card"><div class="stat-number">{{ total }}</div><div class="stat-label">Всего</div></div>
+        <div class="stat-card"><div class="stat-number" style="color:var(--success);">{{ completed }}</div><div class="stat-label">Завершено</div></div>
+        <div class="stat-card"><div class="stat-number" style="color:var(--warning);">{{ analyzing + transcribing + pending }}</div><div class="stat-label">В работе</div></div>
+        <div class="stat-card"><div class="stat-number" style="color:var(--error);">{{ errors }}</div><div class="stat-label">Ошибки</div></div>
+    </div>
+
+    <!-- Мини визуализации -->
+    {% set weekdays = ['Пн','Вт','Ср','Чт','Пт','Сб','Вс'] %}
+    {% set calls_by_day = dict.fromkeys(weekdays, 0) %}
+    {% for c in conversations %}
+        {% set wd = c.upload_date.strftime('%a') %}
+        {% set map = {'Mon':'Пн','Tue':'Вт','Wed':'Ср','Thu':'Чт','Fri':'Пт','Sat':'Сб','Sun':'Вс'} %}
+        {% set dlabel = map.get(wd, 'Пн') %}
+        {% set _ = calls_by_day.update({dlabel: (calls_by_day[dlabel] + 1)}) %}
+    {% endfor %}
+    {% set max_day = calls_by_day.values()|max %}
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:var(--space-6);margin-top:var(--space-6);">
+        <div class="card" style="margin:0;padding:var(--space-6);">
+            <h3 style="font-size:var(--font-size-base);margin-bottom:var(--space-4);display:flex;align-items:center;gap:var(--space-2);"><i class="fas fa-calendar-week" style="color:var(--primary);"></i> Активность по дням</h3>
+            <div style="display:flex;align-items:flex-end;gap:6px;height:110px;">
+                {% for label, val in calls_by_day.items() %}
+                    {% set h = ( (val / (max_day if max_day>0 else 1)) * 100 ) %}
+                    <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:4px;">
+                        <div class="mini-bar" data-h="{{ h|round(0) }}" title="{{ val }} звонков"></div>
+                        <div style="font-size:10px;color:var(--gray-500);">{{ label }}</div>
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+        <div class="card" style="margin:0;padding:var(--space-6);">
+            <h3 style="font-size:var(--font-size-base);margin-bottom:var(--space-4);display:flex;align-items:center;gap:var(--space-2);"><i class="fas fa-tasks" style="color:var(--accent);"></i> Статусы</h3>
+            {% set status_counts = {
+                'completed': completed,
+                'error': errors,
+                'working': analyzing + transcribing + pending
+            } %}
+            {% set total_calc = completed + errors + analyzing + transcribing + pending %}
+            <div style="display:flex;flex-direction:column;gap:10px;">
+                {% for k,v in status_counts.items() %}
+                    {% set perc = ( (v / (total_calc if total_calc>0 else 1)) * 100 ) %}
+                    <div style="display:flex;flex-direction:column;gap:4px;">
+                        <div style="display:flex;justify-content:space-between;font-size:var(--font-size-xs);color:var(--gray-600);">
+                            <span>{{ k }}</span><span>{{ v }}</span>
+                        </div>
+                        <div class="progress-outer"><div class="progress-inner status-{{ k }}" data-w="{{ perc|round(1) }}"></div></div>
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% set all_keywords = [] %}
+        {% for c in conversations if c.analysis and c.analysis.keywords %}
+            {% set kw = (c.analysis.keywords | from_json) %}
+            {% for w in kw %}{% set _ = all_keywords.append(w) %}{% endfor %}
+        {% endfor %}
+        {% set freq = {} %}
+        {% for w in all_keywords %}
+            {% set _ = freq.update({ w: (freq.get(w,0)+1) }) %}
+        {% endfor %}
+        {# Сортируем словарь по значению и потом возьмём первые 8 в цикле #}
+        {% set top = freq|dictsort(by='value', reverse=True) %}
+        <div class="card" style="margin:0;padding:var(--space-6);">
+            <h3 style="font-size:var(--font-size-base);margin-bottom:var(--space-4);display:flex;align-items:center;gap:var(--space-2);"><i class="fas fa-key" style="color:var(--warning);"></i> Ключевые слова</h3>
+                    {% if top %}
+            <div style="display:flex;flex-wrap:wrap;gap:6px;">
+                        {% for k,v in top[:8] %}
+                    <span class="chip" style="background:var(--gray-100);">{{ k }}<span style="color:var(--primary);font-weight:600;margin-left:4px;">{{ v }}</span></span>
+                {% endfor %}
+            </div>
+            {% else %}
+                <div style="font-size:var(--font-size-xs);color:var(--gray-500);">Нет данных</div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Таблица -->
+    <div class="table-container" style="margin-top:var(--space-8);">
+        <table class="table" id="userHistoryTable">
             <thead>
-                <tr style="background: linear-gradient(135deg, #667eea15 0%, #764ba215 100%);">
-                    <th style="padding: 15px; text-align: left; font-weight: 600; color: #2c3e50; border-bottom: 2px solid #667eea;">ID</th>
-                    <th style="padding: 15px; text-align: left; font-weight: 600; color: #2c3e50; border-bottom: 2px solid #667eea;">Файл</th>
-                    <th style="padding: 15px; text-align: left; font-weight: 600; color: #2c3e50; border-bottom: 2px solid #667eea;">Дата загрузки</th>
-                    <th style="padding: 15px; text-align: left; font-weight: 600; color: #2c3e50; border-bottom: 2px solid #667eea;">Статус</th>
-                    <th style="padding: 15px; text-align: left; font-weight: 600; color: #2c3e50; border-bottom: 2px solid #667eea;">Действия</th>
+                <tr>
+                    <th>ID</th>
+                    <th>Файл</th>
+                    <th>Дата</th>
+                    <th>Статус</th>
+                    <th>Срочность</th>
+                    <th>Действия</th>
                 </tr>
             </thead>
             <tbody>
                 {% for conv in conversations %}
-                <tr style="border-bottom: 1px solid #f0f0f0; transition: background 0.2s;" 
-                    onmouseover="this.style.background='#f8f9ff'" 
-                    onmouseout="this.style.background='white'">
-                    <td style="padding: 15px; color: #7f8c8d;">{{ conv.id }}</td>
-                    <td style="padding: 15px;">
-                        <div style="display: flex; align-items: center; gap: 10px;">
-                            <span style="font-size: 1.5rem;">🎵</span>
-                            <strong style="color: #2c3e50;">{{ conv.filename }}</strong>
-                        </div>
-                    </td>
-                    <td style="padding: 15px; color: #7f8c8d;">
-                        {{ conv.upload_date.strftime('%d.%m.%Y') }}<br>
-                        <small>{{ conv.upload_date.strftime('%H:%M') }}</small>
-                    </td>
-                    <td style="padding: 15px;">
+                <tr>
+                    <td style="font-size:var(--font-size-xs);color:var(--gray-500);">{{ conv.id }}</td>
+                    <td style="font-weight:600;">{{ conv.filename }}</td>
+                    <td style="font-size:var(--font-size-xs);white-space:nowrap;">{{ conv.upload_date.strftime('%d.%m.%Y %H:%M') }}</td>
+                    <td><span class="status-chip status-{{ conv.status }}">{{ conv.status_display }}</span></td>
+                    <td>
                         {% if conv.analysis %}
-                        <span style="background: #27ae60; color: white; padding: 6px 14px; border-radius: 20px; font-size: 0.85rem; font-weight: 600;">
-                            ✅ Проанализирован
-                        </span>
+                            <span class="urgency-chip urgency-{{ conv.analysis.urgency or 'unknown' }}">{{ conv.analysis.urgency_display }}</span>
                         {% else %}
-                        <span style="background: #f39c12; color: white; padding: 6px 14px; border-radius: 20px; font-size: 0.85rem; font-weight: 600;">
-                            ⏳ Ожидает
-                        </span>
+                            <span class="urgency-chip urgency-none">—</span>
                         {% endif %}
                     </td>
-                    <td style="padding: 15px;">
-                        <a href="{{ url_for('conversation_detail', conversation_id=conv.id) }}" class="btn btn-secondary" style="font-size:0.9rem; margin-bottom:4px;">Анализ</a>
-                        <form method="POST" action="{{ url_for('delete_conversation', conversation_id=conv.id) }}" 
-                              style="display: inline;"
-                              onsubmit="return confirm('Вы уверены, что хотите удалить этот разговор?');">
-                            <button type="submit" class="btn btn-danger" style="padding: 8px 16px; font-size: 0.9rem;">
-                                🗑️ Удалить
-                            </button>
+                    <td style="display:flex;gap:6px;flex-wrap:wrap;">
+                        <a class="btn btn-sm btn-outline" href="{{ url_for('conversation_detail', conversation_id=conv.id) }}" title="Детали"><i class="fas fa-eye"></i></a>
+                        <form method="POST" action="{{ url_for('delete_conversation', conversation_id=conv.id) }}" onsubmit="return confirm('Удалить разговор?');">
+                            <button type="submit" class="btn btn-sm btn-danger" title="Удалить"><i class="fas fa-trash"></i></button>
                         </form>
                     </td>
                 </tr>
@@ -66,111 +131,47 @@
             </tbody>
         </table>
     </div>
-    
-    <div style="margin-top: 25px; padding: 20px; background: linear-gradient(135deg, #667eea15 0%, #764ba215 100%); border-radius: 10px; display: flex; justify-content: space-between; align-items: center;">
-        <div>
-            <p style="color: #2c3e50; font-weight: 600;">📊 Всего разговоров: <strong style="color: #667eea; font-size: 1.2rem;">{{ conversations|length }}</strong></p>
-        </div>
-        <div>
-            <p style="color: #2c3e50;">
-                Проанализировано: <strong style="color: #27ae60;">{{ conversations|selectattr('analysis')|list|length }}</strong> | 
-                Ожидает: <strong style="color: #f39c12;">{{ conversations|rejectattr('analysis')|list|length }}</strong>
-            </p>
-        </div>
-    </div>
     {% else %}
-    <div style="text-align: center; padding: 80px 20px; color: #7f8c8d;">
-        <p style="font-size: 5rem; margin-bottom: 20px;">📭</p>
-        <h3 style="color: #2c3e50; margin-bottom: 15px;">Пока нет загруженных разговоров</h3>
-        <p style="margin-bottom: 30px;">Загрузите первый аудиофайл для начала работы</p>
-        <a href="{{ url_for('index') }}" class="btn" style="padding: 14px 30px; font-size: 1.1rem;">
-            📤 Загрузить первый файл
-        </a>
-    </div>
+        <div style="text-align:center;padding:80px 20px;color:var(--gray-500);">
+            <div style="font-size:4rem;">📭</div>
+            <h3 style="margin-top:var(--space-4);color:var(--gray-800);">Пока нет разговоров</h3>
+            <p style="font-size:var(--font-size-sm);">Загрузите файл на главной странице чтобы начать</p>
+        </div>
     {% endif %}
 </div>
 
-<!-- Блок расширенной статистики пользователя -->
-<div style="max-width: 900px; margin: 40px auto 0 auto;">
-    <div class="card" style="padding: 30px 30px 20px 30px;">
-        <h3 style="margin-bottom: 20px; color: #2c3e50;">📈 Ваша статистика</h3>
-        <div style="display: flex; flex-wrap: wrap; gap: 30px;">
-            <div style="flex:1 1 300px; min-width: 300px;">
-                <canvas id="userCallsByDayChart" height="120"></canvas>
-            </div>
-            <div style="flex:1 1 300px; min-width: 300px;">
-                <canvas id="userSentimentPieChart" height="120"></canvas>
-            </div>
-            <div style="flex:1 1 300px; min-width: 300px;">
-                <canvas id="userCategoryPieChart" height="120"></canvas>
-            </div>
-        </div>
-        <div style="margin-top: 30px;">
-            <b>Всего звонков:</b> <span id="userTotalCalls">...</span> &nbsp;|&nbsp;
-            <b>Средняя длительность:</b> <span id="userAvgDuration">...</span> сек &nbsp;|&nbsp;
-            <b>Оценка оператора:</b> <span id="userOpQuality">...</span>
-        </div>
-        <div style="margin-top: 18px;">
-            <b>ТОП-5 ключевых слов:</b> <span id="userTopKeywords">...</span>
-        </div>
-    </div>
-</div>
+<style>
+    .mini-bar {width:100%; background:linear-gradient(135deg,var(--primary),var(--secondary)); border-radius:4px; position:relative; height:0; transition:height .35s ease;}
+    #userHistoryTable tbody tr { transition:var(--transition); }
+    #userHistoryTable tbody tr:hover { background:var(--gray-50); }
+    .status-chip { display:inline-block; padding:4px 10px; border-radius:20px; font-size:var(--font-size-xs); font-weight:600; color:var(--white); }
+    .status-completed { background:var(--success); }
+    .status-error { background:var(--error); }
+    .status-transcribing { background:var(--info); }
+    .status-analyzing { background:var(--warning); }
+    .status-pending { background:var(--gray-400); }
+    .urgency-chip { display:inline-block; padding:4px 10px; border-radius:12px; font-size:var(--font-size-xs); font-weight:600; }
+    .urgency-low { background:var(--success); color:var(--white); }
+    .urgency-medium { background:var(--info); color:var(--white); }
+    .urgency-high { background:var(--warning); color:var(--white); }
+    .urgency-critical { background:var(--error); color:var(--white); }
+    .urgency-none { background:var(--gray-300); color:var(--gray-600); }
+    .progress-outer {height:8px;background:var(--gray-200);border-radius:4px;overflow:hidden;}
+    .progress-inner {height:100%;transition:width .4s ease;}
+    .progress-inner.status-completed {background:var(--success);}
+    .progress-inner.status-error {background:var(--error);}
+    .progress-inner.status-working {background:var(--warning);}
+</style>
 
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
-async function loadUserStats() {
-    try {
-        const resp = await fetch('/api/stats/user/{{ current_user.id }}');
-        if (!resp.ok) return;
-        const data = await resp.json();
-        // Calls by day
-        const ctx1 = document.getElementById('userCallsByDayChart').getContext('2d');
-        new Chart(ctx1, {
-            type: 'bar',
-            data: {
-                labels: Object.keys(data.calls_by_day),
-                datasets: [{
-                    label: 'Звонки по дням',
-                    data: Object.values(data.calls_by_day),
-                    backgroundColor: '#667eea',
-                }]
-            },
-            options: {scales: {y: {beginAtZero: true}}}
+    document.addEventListener('DOMContentLoaded', () => {
+        document.querySelectorAll('.mini-bar').forEach(el => {
+            const h = el.getAttribute('data-h'); if(h) el.style.height = h + '%';
         });
-        // Sentiment pie
-        const ctx2 = document.getElementById('userSentimentPieChart').getContext('2d');
-        new Chart(ctx2, {
-            type: 'pie',
-            data: {
-                labels: Object.keys(data.sentiments),
-                datasets: [{
-                    data: Object.values(data.sentiments),
-                    backgroundColor: ['#4fd1c5','#f6ad55','#fc8181','#a0aec0'],
-                }]
-            }
+        document.querySelectorAll('.progress-inner').forEach(el => {
+            const w = el.getAttribute('data-w'); if(w) el.style.width = w + '%';
         });
-        // Category pie
-        const ctx3 = document.getElementById('userCategoryPieChart').getContext('2d');
-        new Chart(ctx3, {
-            type: 'pie',
-            data: {
-                labels: Object.keys(data.categories),
-                datasets: [{
-                    data: Object.values(data.categories),
-                    backgroundColor: ['#667eea','#764ba2','#f6ad55','#fc8181','#a0aec0'],
-                }]
-            }
-        });
-        // Totals
-        document.getElementById('userTotalCalls').textContent = data.total_calls;
-        document.getElementById('userAvgDuration').textContent = data.avg_duration_sec;
-        // Operator quality
-        let opq = Object.entries(data.operator_quality).map(([k,v])=>`${k}: ${v}`).join(', ');
-        document.getElementById('userOpQuality').textContent = opq || 'нет данных';
-        // Top keywords
-        document.getElementById('userTopKeywords').textContent = data.top_keywords.join(', ');
-    } catch(e) {}
-}
-window.addEventListener('DOMContentLoaded', loadUserStats);
+    });
 </script>
+
 {% endblock %}
