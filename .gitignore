@@ -1,0 +1,86 @@
+# ---- Python basics ----
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+.venv/
+venv/
+ENV/
+env/
+
+# Byte-compiled / optimized / DLL files
+*.so
+
+# Distribution / packaging
+.build/
+build/
+dist/
+.eggs/
+*.egg-info/
+
+# Installer logs
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Unit test / coverage reports
+htmlcov/
+.tox/
+.nox/
+.coverage*
+.cache/
+.pytest_cache/
+.mypy_cache/
+
+# Jupyter / IPython
+.ipynb_checkpoints/
+profile_default/
+
+# VSCode / IDE
+.vscode/
+.idea/
+*.iml
+
+# Environment variables
+.env
+.env.*
+!.env.example
+
+# SQLite DB / instance
+instance/
+*.db
+*.sqlite3
+
+# Uploads & generated files
+uploads/*
+!uploads/.gitkeep
+reports/
+
+# Temporary & logs
+*.log
+logs/
+*.tmp
+*.swp
+.DS_Store
+
+# Audio temp
+*.wav
+*.mp3
+temp_*.wav
+
+# Cache / models
+models/
+cache/
+
+# PyInstaller
+*.manifest
+*.spec
+
+# Coverage xml
+coverage.xml
+
+# Profiling data
+.prof
+
+# Generated artifacts
+report_*.txt

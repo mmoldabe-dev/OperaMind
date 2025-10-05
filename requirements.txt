@@ -7,3 +7,7 @@ python-dotenv==1.0.0
 Pillow==11.0.0
 SpeechRecognition==3.10.4
 pydub==0.25.1
+vosk==0.3.44
+librosa==0.10.2.post1
+scikit-learn==1.5.2
+soundfile==0.12.1
