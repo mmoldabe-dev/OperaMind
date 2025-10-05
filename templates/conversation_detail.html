@@ -126,10 +126,91 @@
         </div>
     </div>
 
-    <!-- ПОЛНАЯ ТРАНСКРИПЦИЯ -->
+    <!-- ПОЛНАЯ ТРАНСКРИПЦИЯ (СТРУКТУРИРОВАННАЯ) -->
     <div style="background: #f8f9fa; padding: 25px; border-radius: 10px;">
-        <h3 style="color: #2c3e50; margin-bottom: 15px;">📄 Полная транскрипция</h3>
-        <div style="background: white; padding: 20px; border-radius: 8px; max-height: 500px; overflow-y: auto; line-height: 1.8; color: #2c3e50; white-space: pre-line;">{{ conversation.analysis.transcript }}</div>
+        <h3 style="color: #2c3e50; margin-bottom: 15px;">� Полная транскрипция (Диалог)</h3>
+        {% set is_json = False %}
+        {% set structured = None %}
+        {% if conversation.analysis.transcript %}
+            {% set raw = conversation.analysis.transcript %}
+            {% if raw.startswith('{') %}
+                {% set is_json = True %}
+                {% set structured = raw|from_json %}
+            {% endif %}
+        {% endif %}
+        {% if is_json and structured and structured.segments %}
+        <div style="display:flex; gap:20px; flex-wrap:wrap; margin-bottom:15px;">
+            <div style="background:#eef2ff;padding:8px 14px;border-radius:20px;font-size:0.85rem;">Метод: {{ structured.meta.method if structured.meta and structured.meta.method }}</div>
+            <div style="background:#eef2ff;padding:8px 14px;border-radius:20px;font-size:0.85rem;">Длительность: {{ structured.meta.duration_sec }} c</div>
+        </div>
+        <div style="display:flex; gap:12px; flex-wrap:wrap; margin-bottom:10px; font-size:0.65rem;">
+            <span style="background:#6366f1;color:white;padding:4px 10px;border-radius:14px;">CL Клиент</span>
+            <span style="background:#10b981;color:white;padding:4px 10px;border-radius:14px;">OP Оператор</span>
+            <span style="background:#fde68a;color:#92400e;padding:4px 10px;border-radius:14px;">Пауза &gt; 0.4 c</span>
+            <span style="background:#eef2ff;color:#4338ca;padding:4px 10px;border-radius:14px;">Слова с таймкодами</span>
+        </div>
+        <div id="chat" style="background: white; padding: 20px; border-radius: 8px; max-height: 600px; overflow-y: auto; color:#2c3e50;">
+            {% for seg in structured.segments %}
+                <div class="seg" style="margin-bottom:18px; display:flex; gap:14px; align-items:flex-start;">
+                    <div style="width:52px;text-align:center;">
+                        {% if seg.speaker == 'client' %}
+                            <div style="background:#6366f1;color:white;width:42px;height:42px;display:flex;align-items:center;justify-content:center;border-radius:50%;font-size:0.75rem;">CL</div>
+                        {% elif seg.speaker == 'operator' %}
+                            <div style="background:#10b981;color:white;width:42px;height:42px;display:flex;align-items:center;justify-content:center;border-radius:50%;font-size:0.75rem;">OP</div>
+                        {% else %}
+                            <div style="background:#9ca3af;color:white;width:42px;height:42px;display:flex;align-items:center;justify-content:center;border-radius:50%;font-size:0.75rem;">UK</div>
+                        {% endif %}
+                        <div style="margin-top:6px;font-size:0.65rem;color:#6b7280;">{{ seg.start }}s</div>
+                    </div>
+                    <div style="flex:1;">
+                        <div style="display:flex;align-items:center;gap:10px; margin-bottom:6px;">
+                            <strong style="font-size:0.9rem;">
+                                {% if seg.speaker == 'client' %}Клиент{% elif seg.speaker == 'operator' %}Оператор{% else %}Неизвестно{% endif %}
+                            </strong>
+                            <span style="background:#f3f4f6;padding:2px 8px;border-radius:12px;font-size:0.65rem;color:#374151;">{{ seg.start }} – {{ seg.end }} c</span>
+                            {% if seg.gap_from_prev and seg.gap_from_prev > 0.4 %}
+                                <span style="background:#fde68a;padding:2px 6px;border-radius:12px;font-size:0.6rem;color:#92400e;">Пауза {{ seg.gap_from_prev }} c</span>
+                            {% endif %}
+                        </div>
+                        <div class="bubble" style="background:#f9fafb;border:1px solid #e5e7eb;padding:12px 14px;border-radius:10px;line-height:1.6;font-size:0.9rem; position:relative;">
+                            <div style="margin-bottom:8px; white-space:pre-wrap;">{{ seg.text }}</div>
+                            {% if seg.words %}
+                                <div style="display:flex; flex-wrap:wrap; gap:4px; margin-top:6px;">
+                                    {% for w in seg.words %}
+                                        <span class="word" data-start="{{ w.start }}" data-end="{{ w.end }}" title="{{ w.start }}–{{ w.end }} c" style="background:#eef2ff;color:#4338ca;padding:3px 6px;border-radius:6px;font-size:0.6rem; cursor:help; transition:background .3s;">{{ w.w }}</span>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+        <script>
+            // Hover подсветка сегментов
+            document.querySelectorAll('#chat .seg').forEach(seg => {
+                seg.addEventListener('mouseenter', () => {
+                    const bubble = seg.querySelector('.bubble');
+                    if (bubble) bubble.style.boxShadow = '0 0 0 2px #667eea55, 0 4px 14px rgba(0,0,0,0.08)';
+                });
+                seg.addEventListener('mouseleave', () => {
+                    const bubble = seg.querySelector('.bubble');
+                    if (bubble) bubble.style.boxShadow = 'none';
+                });
+            });
+            // Анимация слов при наведении
+            document.querySelectorAll('#chat .word').forEach(w => {
+                w.addEventListener('mouseenter', () => {
+                    w.style.background = '#c7d2fe';
+                });
+                w.addEventListener('mouseleave', () => {
+                    w.style.background = '#eef2ff';
+                });
+            });
+        </script>
+        {% else %}
+            <div style="background: white; padding: 20px; border-radius: 8px; max-height: 500px; overflow-y: auto; line-height: 1.8; color: #2c3e50; white-space: pre-line;">{{ conversation.analysis.transcript }}</div>
+        {% endif %}
     </div>
 
     {% else %}

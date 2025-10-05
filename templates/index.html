@@ -10,7 +10,7 @@
             Загрузите аудиофайл или готовую транскрипцию
         </p>
         
-        <form method="POST" action="{{ url_for('upload_file') }}" enctype="multipart/form-data">
+    <form id="uploadForm" method="POST" action="{{ url_for('upload_file') }}" enctype="multipart/form-data">
             <div style="margin-bottom: 25px;">
                 <label style="display: block; margin-bottom: 12px; font-weight: 600; color: #2c3e50;">
                     📁 Выберите файл
@@ -30,7 +30,7 @@
                 <p style="color: #7f8c8d;">TXT с готовой транскрипцией</p>
             </div>
             
-            <button type="submit" class="btn" style="width: 100%; padding: 16px; font-size: 1.1rem;">
+            <button id="submitBtn" type="submit" class="btn" style="width: 100%; padding: 16px; font-size: 1.1rem;">
                 🚀 Загрузить и обработать
             </button>
         </form>
@@ -42,6 +42,40 @@
         </a>
     </div>
 </div>
+
+<div id="progressOverlay" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.55); backdrop-filter:blur(4px); z-index:999; align-items:center; justify-content:center;">
+    <div style="background:white; padding:40px 50px; border-radius:18px; width:420px; box-shadow:0 10px 40px rgba(0,0,0,0.25); text-align:center;">
+        <h2 style="margin-bottom:18px; font-size:1.4rem; color:#2c3e50;">⏳ Обработка файла</h2>
+        <p id="phaseText" style="color:#555; margin-bottom:25px;">Загрузка...</p>
+        <div style="height:10px; background:#eef2ff; border-radius:6px; overflow:hidden; margin-bottom:25px;">
+            <div id="bar" style="height:100%; width:10%; background:linear-gradient(90deg,#667eea,#764ba2); transition:width .6s ease;"> </div>
+        </div>
+        <p style="font-size:0.75rem; color:#7f8c8d;">Не закрывайте страницу до завершения.</p>
+    </div>
+</div>
+
+<script>
+    const form = document.getElementById('uploadForm');
+    const overlay = document.getElementById('progressOverlay');
+    const bar = document.getElementById('bar');
+    const phase = document.getElementById('phaseText');
+    const submitBtn = document.getElementById('submitBtn');
+    if (form) {
+        form.addEventListener('submit', () => {
+            overlay.style.display = 'flex';
+            submitBtn.disabled = true;
+            let p = 5;
+            phase.textContent = 'Загрузка файла...';
+            bar.style.width = p + '%';
+            const steps = [
+                {t:1500, phase:'Транскрипция...', w:40},
+                {t:4000, phase:'Анализ разговора...', w:70},
+                {t:7000, phase:'Формирование результата...', w:90},
+            ];
+            steps.forEach(s => setTimeout(()=>{ phase.textContent = s.phase; bar.style.width = s.w + '%'; }, s.t));
+        });
+    }
+</script>
 
 <div style="margin-top: 50px; max-width: 700px; margin-left: auto; margin-right: auto;">
     <div class="card">

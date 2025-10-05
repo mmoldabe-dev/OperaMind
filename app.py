@@ -128,13 +128,25 @@ def upload_file():
             # Определяем тип файла
             if filename.endswith('.txt'):
                 with open(filepath, 'r', encoding='utf-8') as f:
-                    transcript = transcribe_from_text(f.read())
+                    structured_transcript = transcribe_from_text(f.read())
                 print("✅ Текст загружен из файла")
             else:
-                transcript = transcribe_audio_file(filepath)
-            
-            if not transcript:
+                structured_transcript = transcribe_audio_file(filepath)
+
+            if not structured_transcript:
                 raise Exception("Транскрипция не выполнена")
+
+            # Попытка извлечь полный плоский текст
+            flat_text = None
+            try:
+                import json as _json
+                data_tr = _json.loads(structured_transcript)
+                if isinstance(data_tr, dict) and 'text' in data_tr:
+                    flat_text = data_tr.get('text')
+                else:
+                    flat_text = structured_transcript
+            except Exception:
+                flat_text = structured_transcript
             
             # ЭТАП 2: АНАЛИЗ
             print("\n" + "="*60)
@@ -144,12 +156,12 @@ def upload_file():
             conversation.status = 'analyzing'
             db.session.commit()
             
-            analysis_result = analyze_transcript(transcript)
+            analysis_result = analyze_transcript(flat_text)
             
             # Сохранение результатов
             analysis = Analysis(
                 conversation_id=conversation.id,
-                transcript=transcript,
+                transcript=structured_transcript,  # сохраняем структурированный JSON
                 topic=analysis_result.get('topic'),
                 category=analysis_result.get('category'),
                 sentiment=analysis_result.get('sentiment'),
@@ -218,6 +230,23 @@ def download_report(conversation_id):
     a = conversation.analysis
     keywords = json.loads(a.keywords) if a.keywords else []
     
+    # Попытка преобразовать структурированную транскрипцию
+    pretty_transcript = a.transcript
+    try:
+        data_t = json.loads(a.transcript)
+        if isinstance(data_t, dict) and 'segments' in data_t:
+            lines = []
+            for seg in data_t.get('segments', []):
+                speaker = seg.get('speaker', 'unknown')
+                role = 'Клиент' if speaker == 'client' else ('Оператор' if speaker == 'operator' else 'Неизвестно')
+                start = seg.get('start', 0)
+                end = seg.get('end', 0)
+                text_line = seg.get('text', '')
+                lines.append(f"[{start:06.2f}–{end:06.2f}] {role}: {text_line}")
+            pretty_transcript = "\n".join(lines)
+    except Exception:
+        pass
+
     report = f"""
 ОТЧЁТ ПО РАЗГОВОРУ
 {'='*70}
@@ -260,10 +289,10 @@ def download_report(conversation_id):
 {a.recommendations}
 
 {'='*70}
-ПОЛНАЯ ТРАНСКРИПЦИЯ
+ПОЛНАЯ ТРАНСКРИПЦИЯ (ДИАЛОГ)
 {'='*70}
 
-{a.transcript}
+{pretty_transcript}
 
 {'='*70}
 Сгенерировано системой OperaMind
