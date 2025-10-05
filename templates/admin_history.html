@@ -2,11 +2,13 @@
 {% block title %}История звонков (Админ) - OperaMind{% endblock %}
 {% block content %}
 
-<!-- Header + Filters -->
 <div class="card" style="animation:fadeInUp .4s ease;">
     <div class="card-header" style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:var(--space-6);">
         <div>
-            <h2 class="card-title" style="display:flex;align-items:center;gap:var(--space-3);"><i class="fas fa-database" style="color:var(--primary);"></i> История звонков всех пользователей</h2>
+            <h2 class="card-title" style="display:flex;align-items:center;gap:var(--space-3);">
+                <i class="fas fa-database" style="color:var(--primary);"></i> 
+                История звонков всех пользователей
+            </h2>
             <div class="card-subtitle">Полный журнал обработанных и текущих разговоров</div>
         </div>
         <form method="get" style="display:flex;gap:var(--space-4);flex-wrap:wrap;align-items:center;">
@@ -19,13 +21,13 @@
         </form>
     </div>
 
-    <!-- Summary Stats -->
     {% set total = conversations|length %}
     {% set completed = conversations|selectattr('status','equalto','completed')|list|length %}
     {% set errors = conversations|selectattr('status','equalto','error')|list|length %}
     {% set analyzing = conversations|selectattr('status','equalto','analyzing')|list|length %}
     {% set transcribing = conversations|selectattr('status','equalto','transcribing')|list|length %}
     {% set pending = conversations|selectattr('status','equalto','pending')|list|length %}
+
     <div class="admin-grid" style="margin-top:0;">
         <div class="stat-card">
             <div class="stat-number">{{ total }}</div>
@@ -45,63 +47,60 @@
         </div>
     </div>
 
-    <!-- Mini Charts (Pure CSS) -->
-    {% set day_labels = chart_labels %}
-    {% set day_values = chart_data %}
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:var(--space-6);margin-top:var(--space-6);">
         <div class="card" style="margin:0;padding:var(--space-6);">
-            <h3 style="font-size:var(--font-size-lg);margin-bottom:var(--space-4);display:flex;align-items:center;gap:var(--space-2);"><i class="fas fa-chart-bar" style="color:var(--primary);"></i> Активность по дням</h3>
-            {% if day_values %}
-            {% set max_v = day_values|max %}
+            <h3 style="font-size:var(--font-size-lg);margin-bottom:var(--space-4);display:flex;align-items:center;gap:var(--space-2);">
+                <i class="fas fa-chart-bar" style="color:var(--primary);"></i> Активность по дням
+            </h3>
+            {% if chart_data %}
+            {% set max_v = chart_data|max %}
             <div style="display:flex;align-items:flex-end;gap:6px;height:120px;">
-                                {% for v in day_values %}
-                                    {% set h =  ( (v / (max_v if max_v>0 else 1)) * 100 )  %}
-                                    <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:4px;">
-                                        <div class="mini-bar" data-h="{{ h|round(0) }}" title="{{ v }} звонков"></div>
-                                        <div style="font-size:10px;color:var(--gray-500);white-space:nowrap;">{{ day_labels[loop.index0] }}</div>
-                                    </div>
-                                {% endfor %}
+                {% for v in chart_data %}
+                    {% set h = ((v / max_v * 100)|round(0)) if max_v > 0 else 0 %}
+                    <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:4px;">
+                        <div class="mini-bar" data-h="{{ h }}" title="{{ v }} звонков"></div>
+                        <div style="font-size:10px;color:var(--gray-500);white-space:nowrap;">{{ chart_labels[loop.index0] }}</div>
+                    </div>
+                {% endfor %}
             </div>
             {% else %}
                 <div style="color:var(--gray-400);font-size:var(--font-size-sm);">Нет данных</div>
             {% endif %}
         </div>
+
         <div class="card" style="margin:0;padding:var(--space-6);">
-            <h3 style="font-size:var(--font-size-lg);margin-bottom:var(--space-4);display:flex;align-items:center;gap:var(--space-2);"><i class="fas fa-percentage" style="color:var(--accent);"></i> Статусы</h3>
-            {% set status_counts = {
-                'completed': completed,
-                'error': errors,
-                'working': analyzing + transcribing + pending
-            } %}
+            <h3 style="font-size:var(--font-size-lg);margin-bottom:var(--space-4);display:flex;align-items:center;gap:var(--space-2);">
+                <i class="fas fa-percentage" style="color:var(--accent);"></i> Статусы
+            </h3>
+            {% set status_counts = {'completed': completed, 'error': errors, 'working': analyzing + transcribing + pending} %}
             {% set total_calc = completed + errors + analyzing + transcribing + pending %}
             <div style="display:flex;flex-direction:column;gap:10px;">
-                                {% for k,v in status_counts.items() %}
-                                    {% set perc = ( (v / (total_calc if total_calc>0 else 1)) * 100 ) %}
-                                    <div style="display:flex;flex-direction:column;gap:4px;">
-                                        <div style="display:flex;justify-content:space-between;font-size:var(--font-size-xs);color:var(--gray-600);">
-                                            <span>{{ k }}</span><span>{{ v }}</span>
-                                        </div>
-                                        <div class="progress-outer">
-                                            <div class="progress-inner status-{{ k }}" data-w="{{ perc|round(1) }}"></div>
-                                        </div>
-                                    </div>
-                                {% endfor %}
+                {% for k,v in status_counts.items() %}
+                    {% set perc = ((v / total_calc * 100)|round(1)) if total_calc > 0 else 0 %}
+                    <div style="display:flex;flex-direction:column;gap:4px;">
+                        <div style="display:flex;justify-content:space-between;font-size:var(--font-size-xs);color:var(--gray-600);">
+                            <span>{{ k }}</span><span>{{ v }}</span>
+                        </div>
+                        <div class="progress-outer">
+                            <div class="progress-inner status-{{ k }}" data-w="{{ perc }}"></div>
+                        </div>
+                    </div>
+                {% endfor %}
             </div>
         </div>
     </div>
 
-    <!-- Conversations Table -->
     <div class="table-container" style="margin-top:var(--space-8);">
         <table class="table" id="adminHistoryTable">
             <thead>
                 <tr>
-                    <th>ID</th>
-                    <th>Пользователь</th>
-                        <th>Файл</th>
-                    <th>Дата</th>
-                    <th>Статус</th>
-                    <th>Срочность</th>
-                    <th>Действия</th>
+                    <th style="width:60px;">ID</th>
+                    <th style="width:120px;">Пользователь</th>
+                    <th>Файл</th>
+                    <th style="width:150px;">Дата</th>
+                    <th style="width:130px;">Статус</th>
+                    <th style="width:120px;">Срочность</th>
+                    <th style="width:180px;">Действия</th>
                 </tr>
             </thead>
             <tbody>
@@ -111,9 +110,9 @@
                     <td style="font-weight:600;">{{ conv.user.username }}</td>
                     <td>{{ conv.filename }}</td>
                     <td style="font-size:var(--font-size-xs);white-space:nowrap;">{{ conv.upload_date.strftime('%d.%m.%Y %H:%M') }}</td>
-                                <td>
-                                    <span class="status-chip status-{{ conv.status }}">{{ conv.status }}</span>
-                                </td>
+                    <td>
+                        <span class="status-chip status-{{ conv.status }}">{{ conv.status_display }}</span>
+                    </td>
                     <td>
                         {% if conv.analysis %}
                             <span class="urgency-chip urgency-{{ conv.analysis.urgency or 'unknown' }}">{{ conv.analysis.urgency_display }}</span>
@@ -121,11 +120,17 @@
                             <span class="urgency-chip urgency-none">—</span>
                         {% endif %}
                     </td>
-                    <td style="display:flex;gap:6px;flex-wrap:wrap;">
-                        <a class="btn btn-sm btn-outline" href="{{ url_for('conversation_detail', conversation_id=conv.id) }}" title="Детали"><i class="fas fa-eye"></i></a>
-                        {% if conv.analysis %}
-                        <a class="btn btn-sm btn-secondary" href="{{ url_for('download_report', conversation_id=conv.id) }}" title="Отчёт"><i class="fas fa-download"></i></a>
-                        {% endif %}
+                    <td>
+                        <div class="btn-group">
+                            <a class="btn btn-sm btn-outline" href="{{ url_for('conversation_detail', conversation_id=conv.id) }}" title="Детали">
+                                <i class="fas fa-eye"></i>
+                            </a>
+                            {% if conv.analysis %}
+                            <a class="btn btn-sm btn-success" href="{{ url_for('download_report', conversation_id=conv.id) }}" title="Отчёт">
+                                <i class="fas fa-download"></i>
+                            </a>
+                            {% endif %}
+                        </div>
                     </td>
                 </tr>
                 {% endfor %}
@@ -135,31 +140,59 @@
 </div>
 
 <style>
-    .mini-bar {width:100%; background:linear-gradient(135deg,var(--primary),var(--secondary)); border-radius:4px; position:relative; transition:height .35s ease;}
-    .status-chip { display:inline-block; padding:4px 10px; border-radius:20px; font-size:var(--font-size-xs); font-weight:600; color:var(--white); }
+    .mini-bar { 
+        width:100%; 
+        background:linear-gradient(135deg,var(--primary),var(--secondary)); 
+        border-radius:4px; 
+        position:relative; 
+        transition:height .35s ease;
+        height:0;
+    }
+    
+    .status-chip { 
+        display:inline-block; 
+        padding:4px 10px; 
+        border-radius:20px; 
+        font-size:var(--font-size-xs); 
+        font-weight:600; 
+        color:var(--white); 
+    }
     .status-completed { background:var(--success); }
     .status-error { background:var(--error); }
     .status-transcribing { background:var(--info); }
     .status-analyzing { background:var(--warning); }
     .status-pending { background:var(--gray-400); }
-    .urgency-chip { display:inline-block; padding:4px 10px; border-radius:12px; font-size:var(--font-size-xs); font-weight:600; }
-    .urgency-low { background:var(--success); color:var(--white); }
-    .urgency-medium { background:var(--info); color:var(--white); }
-    .urgency-high { background:var(--warning); color:var(--white); }
-    .urgency-critical { background:var(--error); color:var(--white); }
+
+    .urgency-chip { 
+        display:inline-block; 
+        padding:4px 10px; 
+        border-radius:12px; 
+        font-size:var(--font-size-xs); 
+        font-weight:600; 
+    }
+    .urgency-низкая { background:var(--success); color:var(--white); }
+    .urgency-средняя { background:var(--info); color:var(--white); }
+    .urgency-высокая { background:var(--warning); color:var(--white); }
+    .urgency-критическая { background:var(--error); color:var(--white); }
     .urgency-none { background:var(--gray-300); color:var(--gray-600); }
-    /* Hover animation rows */
-    #adminHistoryTable tbody tr { transition:var(--transition); }
-    #adminHistoryTable tbody tr:hover { background:var(--gray-50); }
-    .progress-outer {height:8px;background:var(--gray-200);border-radius:4px;overflow:hidden;}
-    .progress-inner {height:100%;transition:width .4s ease;}
-    .progress-inner.status-completed {background:var(--success);}
-    .progress-inner.status-error {background:var(--error);}
-    .progress-inner.status-working {background:var(--warning);}
+
+    .progress-outer { 
+        height:8px;
+        background:var(--gray-200);
+        border-radius:4px;
+        overflow:hidden;
+    }
+    .progress-inner { 
+        height:100%;
+        transition:width .4s ease;
+        width:0;
+    }
+    .progress-inner.status-completed { background:var(--success); }
+    .progress-inner.status-error { background:var(--error); }
+    .progress-inner.status-working { background:var(--warning); }
 </style>
 
 <script>
-    // Применяем проценты высоты и ширины после загрузки DOM
     document.addEventListener('DOMContentLoaded', () => {
         document.querySelectorAll('.mini-bar').forEach(el => {
             const h = el.getAttribute('data-h');

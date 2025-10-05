@@ -1,0 +1,142 @@
+{% extends 'base.html' %}
+{% block title %}Моя статистика - OperaMind{% endblock %}
+{% block content %}
+
+<div class="card" style="animation:fadeInUp .4s ease;">
+    <div class="card-header">
+        <h2 class="card-title" style="display:flex;align-items:center;gap:var(--space-3);">
+            <i class="fas fa-chart-line" style="color:var(--primary);"></i>
+            Моя статистика
+        </h2>
+        <div class="card-subtitle">Персональная аналитика ваших разговоров</div>
+    </div>
+
+    <div class="admin-grid" style="margin-bottom:var(--space-8);">
+        <div class="stat-card">
+            <div class="stat-number">{{ total }}</div>
+            <div class="stat-label">Всего разговоров</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-number" style="color:var(--success);">{{ completed }}</div>
+            <div class="stat-label">Завершено</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-number" style="color:var(--warning);">{{ processing }}</div>
+            <div class="stat-label">В обработке</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-number">{{ avg_duration|round(1) }}</div>
+            <div class="stat-label">Средняя длит. (сек)</div>
+        </div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:var(--space-6);">
+        
+        <div class="card" style="padding:var(--space-6);margin:0;">
+            <h3 style="font-size:var(--font-size-lg);margin-bottom:var(--space-4);display:flex;align-items:center;gap:var(--space-2);">
+                <i class="fas fa-smile" style="color:var(--info);"></i> Тональность
+            </h3>
+            {% if sentiments %}
+            <div style="display:flex;flex-direction:column;gap:8px;">
+                {% for k,v in sentiments.items() %}
+                {% set total_sent = sentiments.values()|sum %}
+                {% set perc = (v / total_sent * 100) if total_sent > 0 else 0 %}
+                <div style="display:flex;align-items:center;gap:10px;">
+                    <div style="flex:1;display:flex;justify-content:space-between;font-size:var(--font-size-sm);">
+                        <span>{{ k }}</span><span style="color:var(--gray-500);">{{ v }}</span>
+                    </div>
+                    <div style="flex:2;height:8px;background:var(--gray-200);border-radius:4px;overflow:hidden;">
+                        <div style="height:100%;width:{{ perc|round(1) }}%;background:linear-gradient(90deg,var(--primary),var(--secondary));"></div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div style="color:var(--gray-400);font-size:var(--font-size-sm);">Нет данных</div>
+            {% endif %}
+        </div>
+
+        <div class="card" style="padding:var(--space-6);margin:0;">
+            <h3 style="font-size:var(--font-size-lg);margin-bottom:var(--space-4);display:flex;align-items:center;gap:var(--space-2);">
+                <i class="fas fa-exclamation-triangle" style="color:var(--warning);"></i> Срочность
+            </h3>
+            {% if urgencies %}
+            <div style="display:flex;flex-direction:column;gap:8px;">
+                {% for k,v in urgencies.items() %}
+                {% set total_urg = urgencies.values()|sum %}
+                {% set perc = (v / total_urg * 100) if total_urg > 0 else 0 %}
+                <div style="display:flex;align-items:center;gap:10px;">
+                    <div style="flex:1;display:flex;justify-content:space-between;font-size:var(--font-size-sm);">
+                        <span>{{ k }}</span><span style="color:var(--gray-500);">{{ v }}</span>
+                    </div>
+                    <div style="flex:2;height:8px;background:var(--gray-200);border-radius:4px;overflow:hidden;">
+                        <div style="height:100%;width:{{ perc|round(1) }}%;background:linear-gradient(90deg,var(--error),var(--warning));"></div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div style="color:var(--gray-400);font-size:var(--font-size-sm);">Нет данных</div>
+            {% endif %}
+        </div>
+
+        <div class="card" style="padding:var(--space-6);margin:0;">
+            <h3 style="font-size:var(--font-size-lg);margin-bottom:var(--space-4);display:flex;align-items:center;gap:var(--space-2);">
+                <i class="fas fa-tags" style="color:var(--accent);"></i> Категории
+            </h3>
+            {% if categories %}
+            <div style="display:flex;flex-direction:column;gap:8px;">
+                {% for k,v in categories.items() %}
+                {% set total_cat = categories.values()|sum %}
+                {% set perc = (v / total_cat * 100) if total_cat > 0 else 0 %}
+                <div style="display:flex;align-items:center;gap:10px;">
+                    <div style="flex:1;display:flex;justify-content:space-between;font-size:var(--font-size-sm);">
+                        <span>{{ k }}</span><span style="color:var(--gray-500);">{{ v }}</span>
+                    </div>
+                    <div style="flex:2;height:8px;background:var(--gray-200);border-radius:4px;overflow:hidden;">
+                        <div style="height:100%;width:{{ perc|round(1) }}%;background:linear-gradient(90deg,var(--accent),var(--info));"></div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div style="color:var(--gray-400);font-size:var(--font-size-sm);">Нет данных</div>
+            {% endif %}
+        </div>
+
+        <div class="card" style="padding:var(--space-6);margin:0;">
+            <h3 style="font-size:var(--font-size-lg);margin-bottom:var(--space-4);display:flex;align-items:center;gap:var(--space-2);">
+                <i class="fas fa-key" style="color:var(--secondary);"></i> Топ ключевые слова
+            </h3>
+            {% if top_keywords %}
+            <div style="display:flex;flex-wrap:wrap;gap:8px;">
+                {% for kw in top_keywords %}
+                <span style="background:linear-gradient(135deg,var(--primary),var(--secondary));color:var(--white);padding:6px 12px;border-radius:var(--radius-md);font-size:var(--font-size-xs);font-weight:600;box-shadow:var(--shadow);">{{ kw }}</span>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div style="color:var(--gray-400);font-size:var(--font-size-sm);">Нет данных</div>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="card" style="margin-top:var(--space-6);padding:var(--space-6);">
+        <h3 style="font-size:var(--font-size-lg);margin-bottom:var(--space-4);display:flex;align-items:center;gap:var(--space-2);">
+            <i class="fas fa-calendar-week" style="color:var(--primary);"></i> Активность по дням недели
+        </h3>
+        <div style="display:flex;align-items:flex-end;gap:12px;height:150px;">
+            {% set max_val = weekday_data|max if weekday_data else 1 %}
+            {% for i in range(7) %}
+            {% set val = weekday_data[i] %}
+            {% set height = ((val / max_val) * 100) if max_val > 0 else 0 %}
+            <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:6px;">
+                <div style="width:100%;background:linear-gradient(135deg,var(--primary),var(--secondary));border-radius:4px;height:{{ height }}%;min-height:4px;transition:height .3s;"></div>
+                <div style="font-size:10px;color:var(--gray-600);font-weight:600;">{{ weekday_labels[i] }}</div>
+                <div style="font-size:11px;color:var(--gray-500);">{{ val }}</div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+{% endblock %}

@@ -4,25 +4,33 @@
 <div class="card" style="animation:fadeInUp .4s ease;">
   <div class="card-header" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:var(--space-4);">
     <div>
-      <h2 class="card-title" style="display:flex;align-items:center;gap:var(--space-2);"><i class="fas fa-chart-line" style="color:var(--primary);"></i> Статистика: {{ target_user.username }}</h2>
+      <h2 class="card-title" style="display:flex;align-items:center;gap:var(--space-2);">
+        <i class="fas fa-chart-line" style="color:var(--primary);"></i> 
+        Статистика: {{ target_user.username }}
+      </h2>
       <div class="card-subtitle">Аналитика по разговорам пользователя</div>
     </div>
     <div style="display:flex;gap:var(--space-3);flex-wrap:wrap;">
-      <a href="{{ url_for('admin.admin_user_history', user_id=target_user.id) }}" class="btn btn-outline btn-sm"><i class="fas fa-history"></i> История</a>
-      <a href="{{ url_for('admin.admin_users') }}" class="btn btn-outline btn-sm"><i class="fas fa-arrow-left"></i> Назад</a>
+      <a href="{{ url_for('admin.admin_user_history', user_id=target_user.id) }}" class="btn btn-outline btn-sm">
+        <i class="fas fa-history"></i> История
+      </a>
+      <a href="{{ url_for('admin.admin_users') }}" class="btn btn-outline btn-sm">
+        <i class="fas fa-arrow-left"></i> Назад
+      </a>
     </div>
   </div>
+
   <div class="admin-grid">
     <div class="stat-card">
       <div class="stat-number">{{ total }}</div>
       <div class="stat-label">Всего разговоров</div>
     </div>
     <div class="stat-card">
-      <div class="stat-number">{{ completed }}</div>
+      <div class="stat-number" style="color:var(--success);">{{ completed }}</div>
       <div class="stat-label">Завершено</div>
     </div>
     <div class="stat-card">
-      <div class="stat-number">{{ errors }}</div>
+      <div class="stat-number" style="color:var(--error);">{{ errors }}</div>
       <div class="stat-label">Ошибки</div>
     </div>
     <div class="stat-card">
@@ -30,20 +38,24 @@
       <div class="stat-label">Средняя длит. (сек)</div>
     </div>
   </div>
+
   <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:var(--space-6);margin-top:var(--space-6);">
     <div class="card" style="padding:var(--space-6);margin:0;">
-      <h3 style="font-size:var(--font-size-lg);margin-bottom:var(--space-4);display:flex;align-items:center;gap:var(--space-2);"><i class="fas fa-smile" style="color:var(--info);"></i> Тональность</h3>
+      <h3 style="font-size:var(--font-size-lg);margin-bottom:var(--space-4);display:flex;align-items:center;gap:var(--space-2);">
+        <i class="fas fa-smile" style="color:var(--info);"></i> Тональность
+      </h3>
       {% if sentiments %}
         <div style="display:flex;flex-direction:column;gap:8px;">
           {% for k,v in sentiments.items() %}
-            {% set perc = (v / (sentiments.values()|sum)) * 100 %}
-            {% set width_perc = '%.1f' % perc %}
+            {% set total_sent = sentiments.values()|sum %}
+            {% set perc = (v / total_sent * 100) if total_sent > 0 else 0 %}
             <div style="display:flex;align-items:center;gap:10px;">
               <div style="flex:1;display:flex;justify-content:space-between;font-size:var(--font-size-sm);">
-                <span>{{ k }}</span><span style="color:var(--gray-500);">{{ v }}</span>
+                <span>{{ k }}</span>
+                <span style="color:var(--gray-500);">{{ v }}</span>
               </div>
               <div style="flex:2;height:8px;background:var(--gray-200);border-radius:4px;overflow:hidden;">
-                <div style="height:100%;width: {{ width_perc }}%;background:linear-gradient(90deg,var(--primary),var(--secondary));"></div>
+                <div style="height:100%;width:{{ perc|round(1) }}%;background:linear-gradient(90deg,var(--primary),var(--secondary));"></div>
               </div>
             </div>
           {% endfor %}
@@ -52,19 +64,23 @@
         <div style="color:var(--gray-400);font-size:var(--font-size-sm);">Нет данных</div>
       {% endif %}
     </div>
+
     <div class="card" style="padding:var(--space-6);margin:0;">
-      <h3 style="font-size:var(--font-size-lg);margin-bottom:var(--space-4);display:flex;align-items:center;gap:var(--space-2);"><i class="fas fa-bolt" style="color:var(--warning);"></i> Срочность</h3>
+      <h3 style="font-size:var(--font-size-lg);margin-bottom:var(--space-4);display:flex;align-items:center;gap:var(--space-2);">
+        <i class="fas fa-bolt" style="color:var(--warning);"></i> Срочность
+      </h3>
       {% if urgencies %}
         <div style="display:flex;flex-direction:column;gap:8px;">
           {% for k,v in urgencies.items() %}
-            {% set perc = (v / (urgencies.values()|sum)) * 100 %}
-            {% set width_perc = '%.1f' % perc %}
+            {% set total_urg = urgencies.values()|sum %}
+            {% set perc = (v / total_urg * 100) if total_urg > 0 else 0 %}
             <div style="display:flex;align-items:center;gap:10px;">
               <div style="flex:1;display:flex;justify-content:space-between;font-size:var(--font-size-sm);">
-                <span>{{ k }}</span><span style="color:var(--gray-500);">{{ v }}</span>
+                <span>{{ k }}</span>
+                <span style="color:var(--gray-500);">{{ v }}</span>
               </div>
               <div style="flex:2;height:8px;background:var(--gray-200);border-radius:4px;overflow:hidden;">
-                <div style="height:100%;width: {{ width_perc }}%;background:linear-gradient(90deg,var(--success),var(--accent));"></div>
+                <div style="height:100%;width:{{ perc|round(1) }}%;background:linear-gradient(90deg,var(--success),var(--accent));"></div>
               </div>
             </div>
           {% endfor %}
@@ -73,8 +89,11 @@
         <div style="color:var(--gray-400);font-size:var(--font-size-sm);">Нет данных</div>
       {% endif %}
     </div>
+
     <div class="card" style="padding:var(--space-6);margin:0;">
-      <h3 style="font-size:var(--font-size-lg);margin-bottom:var(--space-4);display:flex;align-items:center;gap:var(--space-2);"><i class="fas fa-key" style="color:var(--secondary);"></i> Топ ключевых слов</h3>
+      <h3 style="font-size:var(--font-size-lg);margin-bottom:var(--space-4);display:flex;align-items:center;gap:var(--space-2);">
+        <i class="fas fa-key" style="color:var(--secondary);"></i> Топ ключевых слов
+      </h3>
       {% if top_keywords %}
         <div style="display:flex;flex-wrap:wrap;gap:8px;">
           {% for kw in top_keywords %}

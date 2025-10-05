@@ -1,0 +1,188 @@
+{% extends 'base.html' %}
+{% block title %}Глобальная аналитика - OperaMind{% endblock %}
+{% block content %}
+
+<div class="card" style="animation:fadeInUp .4s ease;">
+    <div class="card-header">
+        <h2 class="card-title" style="display:flex;align-items:center;gap:var(--space-3);">
+            <i class="fas fa-chart-bar" style="color:var(--primary);"></i>
+            Глобальная аналитика системы
+        </h2>
+        <div class="card-subtitle">Общая статистика и производительность</div>
+    </div>
+
+    <div class="admin-grid" style="margin-bottom:var(--space-8);">
+        <div class="stat-card">
+            <div class="stat-number">{{ total }}</div>
+            <div class="stat-label">Всего разговоров</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-number" style="color:var(--success);">{{ completed }}</div>
+            <div class="stat-label">Завершено</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-number" style="color:var(--warning);">{{ processing }}</div>
+            <div class="stat-label">В обработке</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-number" style="color:var(--error);">{{ errors }}</div>
+            <div class="stat-label">Ошибки</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-number">{{ avg_duration|round(1) }}</div>
+            <div class="stat-label">Средняя длит. (сек)</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-number">{{ ((completed / total * 100)|round(1)) if total > 0 else 0 }}%</div>
+            <div class="stat-label">Успешность</div>
+        </div>
+    </div>
+
+    <div class="card" style="margin-bottom:var(--space-6);padding:var(--space-6);">
+        <h3 style="font-size:var(--font-size-xl);margin-bottom:var(--space-4);display:flex;align-items:center;gap:var(--space-2);">
+            <i class="fas fa-users" style="color:var(--info);"></i> Производительность операторов
+        </h3>
+        <div class="table-container">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Оператор</th>
+                        <th>Всего</th>
+                        <th>Завершено</th>
+                        <th>Ошибки</th>
+                        <th>Успешность</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for stat in user_stats %}
+                    <tr>
+                        <td style="font-weight:600;">{{ stat.username }}</td>
+                        <td>{{ stat.total }}</td>
+                        <td><span style="color:var(--success);font-weight:600;">{{ stat.completed or 0 }}</span></td>
+                        <td><span style="color:var(--error);font-weight:600;">{{ stat.errors or 0 }}</span></td>
+                        <td>
+                            {% set success_rate = ((stat.completed / stat.total * 100)|round(1)) if stat.total > 0 else 0 %}
+                            <div style="display:flex;align-items:center;gap:8px;">
+                                <div style="flex:1;height:6px;background:var(--gray-200);border-radius:3px;overflow:hidden;">
+                                    <div style="height:100%;width:{{ success_rate }}%;background:var(--success);"></div>
+                                </div>
+                                <span style="font-size:var(--font-size-xs);font-weight:600;color:var(--gray-600);">{{ success_rate }}%</span>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:var(--space-6);margin-bottom:var(--space-6);">
+        
+        <div class="card" style="padding:var(--space-6);margin:0;">
+            <h3 style="font-size:var(--font-size-lg);margin-bottom:var(--space-4);display:flex;align-items:center;gap:var(--space-2);">
+                <i class="fas fa-smile" style="color:var(--info);"></i> Тональность
+            </h3>
+            {% if sentiments %}
+            <div style="display:flex;flex-direction:column;gap:8px;">
+                {% for k,v in sentiments.items() %}
+                {% set total_sent = sentiments.values()|sum %}
+                {% set perc = (v / total_sent * 100) if total_sent > 0 else 0 %}
+                <div style="display:flex;align-items:center;gap:10px;">
+                    <div style="flex:1;display:flex;justify-content:space-between;font-size:var(--font-size-sm);">
+                        <span>{{ k }}</span><span style="color:var(--gray-500);">{{ v }}</span>
+                    </div>
+                    <div style="flex:2;height:8px;background:var(--gray-200);border-radius:4px;overflow:hidden;">
+                        <div style="height:100%;width:{{ perc|round(1) }}%;background:linear-gradient(90deg,var(--primary),var(--secondary));"></div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div style="color:var(--gray-400);font-size:var(--font-size-sm);">Нет данных</div>
+            {% endif %}
+        </div>
+
+        <div class="card" style="padding:var(--space-6);margin:0;">
+            <h3 style="font-size:var(--font-size-lg);margin-bottom:var(--space-4);display:flex;align-items:center;gap:var(--space-2);">
+                <i class="fas fa-exclamation-triangle" style="color:var(--warning);"></i> Срочность
+            </h3>
+            {% if urgencies %}
+            <div style="display:flex;flex-direction:column;gap:8px;">
+                {% for k,v in urgencies.items() %}
+                {% set total_urg = urgencies.values()|sum %}
+                {% set perc = (v / total_urg * 100) if total_urg > 0 else 0 %}
+                <div style="display:flex;align-items:center;gap:10px;">
+                    <div style="flex:1;display:flex;justify-content:space-between;font-size:var(--font-size-sm);">
+                        <span>{{ k }}</span><span style="color:var(--gray-500);">{{ v }}</span>
+                    </div>
+                    <div style="flex:2;height:8px;background:var(--gray-200);border-radius:4px;overflow:hidden;">
+                        <div style="height:100%;width:{{ perc|round(1) }}%;background:linear-gradient(90deg,var(--error),var(--warning));"></div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div style="color:var(--gray-400);font-size:var(--font-size-sm);">Нет данных</div>
+            {% endif %}
+        </div>
+
+        <div class="card" style="padding:var(--space-6);margin:0;">
+            <h3 style="font-size:var(--font-size-lg);margin-bottom:var(--space-4);display:flex;align-items:center;gap:var(--space-2);">
+                <i class="fas fa-tags" style="color:var(--accent);"></i> Категории
+            </h3>
+            {% if categories %}
+            <div style="display:flex;flex-direction:column;gap:8px;">
+                {% for k,v in categories.items() %}
+                {% set total_cat = categories.values()|sum %}
+                {% set perc = (v / total_cat * 100) if total_cat > 0 else 0 %}
+                <div style="display:flex;align-items:center;gap:10px;">
+                    <div style="flex:1;display:flex;justify-content:space-between;font-size:var(--font-size-sm);">
+                        <span>{{ k }}</span><span style="color:var(--gray-500);">{{ v }}</span>
+                    </div>
+                    <div style="flex:2;height:8px;background:var(--gray-200);border-radius:4px;overflow:hidden;">
+                        <div style="height:100%;width:{{ perc|round(1) }}%;background:linear-gradient(90deg,var(--accent),var(--info));"></div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div style="color:var(--gray-400);font-size:var(--font-size-sm);">Нет данных</div>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="card" style="padding:var(--space-6);margin-bottom:var(--space-6);">
+        <h3 style="font-size:var(--font-size-xl);margin-bottom:var(--space-4);display:flex;align-items:center;gap:var(--space-2);">
+            <i class="fas fa-key" style="color:var(--secondary);"></i> Топ ключевые слова (глобально)
+        </h3>
+        {% if top_keywords %}
+        <div style="display:flex;flex-wrap:wrap;gap:10px;">
+            {% for kw in top_keywords %}
+            <span style="background:linear-gradient(135deg,var(--primary),var(--secondary));color:var(--white);padding:8px 16px;border-radius:var(--radius-lg);font-size:var(--font-size-sm);font-weight:600;box-shadow:var(--shadow);">{{ kw }}</span>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div style="color:var(--gray-400);font-size:var(--font-size-sm);">Нет данных</div>
+        {% endif %}
+    </div>
+
+    <div class="card" style="padding:var(--space-6);">
+        <h3 style="font-size:var(--font-size-xl);margin-bottom:var(--space-4);display:flex;align-items:center;gap:var(--space-2);">
+            <i class="fas fa-calendar-week" style="color:var(--primary);"></i> Активность по дням недели
+        </h3>
+        <div style="display:flex;align-items:flex-end;gap:16px;height:200px;">
+            {% set max_val = weekday_data|max if weekday_data else 1 %}
+            {% for i in range(7) %}
+            {% set val = weekday_data[i] %}
+            {% set height = ((val / max_val) * 100) if max_val > 0 else 0 %}
+            <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:8px;">
+                <div style="width:100%;background:linear-gradient(135deg,var(--primary),var(--secondary));border-radius:6px;height:{{ height }}%;min-height:8px;transition:height .3s;box-shadow:var(--shadow-sm);"></div>
+                <div style="font-size:12px;color:var(--gray-700);font-weight:700;">{{ weekday_labels[i] }}</div>
+                <div style="font-size:13px;color:var(--gray-600);font-weight:600;">{{ val }}</div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+{% endblock %}
