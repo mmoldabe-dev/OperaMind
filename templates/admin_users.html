@@ -1,62 +1,155 @@
-{% extends "base.html" %}
-{% block title %}Пользователи - Админка{% endblock %}
+{% extends 'base.html' %}
+{% block title %}Пользователи - OperaMind{% endblock %}
 {% block content %}
-<div class="card">
-    <h2 style="color:#2c3e50; margin-bottom:20px;">🛠️ Админ-панель: пользователи</h2>
-    <div style="margin-bottom:18px; display:flex; gap:20px; align-items:center;">
-        <input id="userFilter" type="text" placeholder="Фильтр по имени..." style="padding:8px 14px; border:1.5px solid #667eea; border-radius:8px; font-size:1rem;">
-        <span style="color:#7f8c8d;">Всего: <b id="userCount">{{ users|length }}</b></span>
+<div class="card" style="animation: fadeInUp 0.5s ease;">
+        <div class="card-header" style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:var(--space-6);">
+            <div style="flex:1;min-width:260px;">
+                <h2 class="card-title" style="display:flex;align-items:center;gap:var(--space-3);"><i class="fas fa-users-cog" style="color:var(--primary);"></i> Управление пользователями</h2>
+                <div class="card-subtitle" style="margin-top:4px;">Всего пользователей: <strong id="userCount">{{ users|length }}</strong></div>
+                <div style="margin-top:var(--space-4); display:flex; gap:var(--space-3); flex-wrap:wrap;">
+                    <button class="btn btn-success btn-sm" type="button" onclick="openCreateModal()"><i class="fas fa-user-plus"></i> Новый пользователь</button>
+                </div>
+            </div>
+            <div style="display:flex;gap:var(--space-4);align-items:center;flex-wrap:wrap;">
+                <div style="position:relative;">
+                    <i class="fas fa-search" style="position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--gray-400);"></i>
+                    <input id="userFilter" type="text" placeholder="Фильтр по логину" style="padding:10px 14px 10px 34px;border:1px solid var(--gray-300);border-radius:var(--radius-md);font-size:var(--font-size-sm);min-width:220px;">
+                </div>
+                <button class="btn btn-outline btn-sm" type="button" onclick="resetFilter()"><i class="fas fa-undo"></i> Сброс</button>
+            </div>
+        </div>
+    <div class="table-container" style="overflow-x:auto;border-radius:var(--radius-lg);">
+        <table class="table" id="userTable">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Логин</th>
+                    <th>Роль</th>
+                    <th>Активность</th>
+                    <th>Создан</th>
+                    <th>Управление</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for u in users %}
+                <tr data-username="{{ u.username|lower }}">
+                    <td style="font-size:var(--font-size-sm);color:var(--gray-500);">{{ u.id }}</td>
+                    <td style="font-weight:600;">{{ u.username }}</td>
+                                <td>
+                                    <span class="role-chip {% if u.role.name=='ADMIN' %}role-chip-admin{% elif u.role.name=='OPERATOR' %}role-chip-operator{% else %}role-chip-user{% endif %}">
+                                        {{ u.role_display }}
+                                    </span>
+                                </td>
+                    <td>
+                        {% if u.is_active %}
+                            <span style="color:var(--success);font-weight:600;font-size:var(--font-size-xs);"><i class="fas fa-circle" style="font-size:8px;"></i> активен</span>
+                        {% else %}
+                            <span style="color:var(--error);font-weight:600;font-size:var(--font-size-xs);"><i class="fas fa-circle" style="font-size:8px;"></i> отключён</span>
+                        {% endif %}
+                    </td>
+                    <td style="font-size:var(--font-size-xs);color:var(--gray-500);white-space:nowrap;">{{ u.created_at.strftime('%d.%m.%Y %H:%M') if u.created_at else '' }}</td>
+                                <td style="min-width:250px;">
+                                    <div style="display:flex;flex-direction:column;gap:6px;">
+                                        <div style="display:flex;gap:6px;flex-wrap:wrap;">
+                                            <a class="btn btn-sm btn-secondary" href="{{ url_for('admin.admin_user_history', user_id=u.id) }}" title="История загрузок">
+                                                <i class="fas fa-history"></i>
+                                            </a>
+                                            <a class="btn btn-sm btn-outline" href="{{ url_for('admin.admin_user_stats', user_id=u.id) }}" title="Статистика пользователя">
+                                                <i class="fas fa-chart-line"></i>
+                                            </a>
+                                        </div>
+                                        {% if current_user.id != u.id %}
+                                        <form method="post" action="{{ url_for('admin.admin_users_update') }}" style="display:flex; gap:6px; align-items:center;flex-wrap:wrap;" onsubmit="return confirm('Подтвердить изменение параметров пользователя?');">
+                                            <input type="hidden" name="user_id" value="{{ u.id }}">
+                                            <select name="role" style="padding:6px 8px;border:1px solid var(--gray-300);border-radius:var(--radius);font-size:var(--font-size-xs);background:var(--white);">
+                                                <option value="USER" {% if u.role.name=='USER' %}selected{% endif %}>USER</option>
+                                                <option value="OPERATOR" {% if u.role.name=='OPERATOR' %}selected{% endif %}>OPERATOR</option>
+                                                <option value="ADMIN" {% if u.role.name=='ADMIN' %}selected{% endif %}>ADMIN</option>
+                                            </select>
+                                            <select name="is_active" style="padding:6px 8px;border:1px solid var(--gray-300);border-radius:var(--radius);font-size:var(--font-size-xs);background:var(--white);">
+                                                <option value="1" {% if u.is_active %}selected{% endif %}>ON</option>
+                                                <option value="0" {% if not u.is_active %}selected{% endif %}>OFF</option>
+                                            </select>
+                                            <button class="btn btn-sm" style="background:var(--primary);"><i class="fas fa-save"></i></button>
+                                        </form>
+                                        {% else %}
+                                        <span style="font-size:var(--font-size-xs);color:var(--gray-400);">(текущий)</span>
+                                        {% endif %}
+                                    </div>
+                                </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
     </div>
-    <div style="overflow-x:auto;">
-    <table id="userTable" style="width:100%; border-collapse:collapse;">
-        <thead>
-            <tr style="background: linear-gradient(135deg, #667eea15 0%, #764ba215 100%);">
-                <th style="padding:12px;">ID</th>
-                <th style="padding:12px;">Логин</th>
-                <th style="padding:12px;">Дата регистрации</th>
-                <th style="padding:12px;">Роль</th>
-                <th style="padding:12px;">Действия</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for u in users %}
-            {% if u.is_admin %}
-            <tr style="border-bottom:1px solid #f0f0f0; background:#f8f9ff;">
-            {% else %}
-            <tr style="border-bottom:1px solid #f0f0f0;">
-            {% endif %}
-                <td style="padding:12px; color:#7f8c8d;">{{ u.id }}</td>
-                {% if u.is_admin %}
-                <td style="padding:12px; font-weight:600; color:#667eea;">{{ u.username }}</td>
-                {% else %}
-                <td style="padding:12px; font-weight:600; color:#2c3e50;">{{ u.username }}</td>
-                {% endif %}
-                <td style="padding:12px;">{{ u.created_at.strftime('%d.%m.%Y %H:%M') }}</td>
-                <td style="padding:12px;">{{ 'Админ' if u.is_admin else 'Работник' }}</td>
-                <td style="padding:12px;">
-                    <a href="/history?user_id={{ u.id }}" class="btn btn-secondary" style="font-size:0.9rem;">История</a>
-                    <a href="/api/stats/user/{{ u.id }}" class="btn btn-secondary" style="font-size:0.9rem;">Статистика</a>
-                </td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
+</div>
+
+<script>
+function resetFilter(){
+    const f = document.getElementById('userFilter');
+    f.value='';
+    applyFilter();
+}
+function applyFilter(){
+    const val = document.getElementById('userFilter').value.toLowerCase();
+    const rows = document.querySelectorAll('#userTable tbody tr');
+    let shown=0;
+    rows.forEach(r=>{
+        const uname = r.getAttribute('data-username');
+        if(!val || uname.includes(val)){ r.style.display=''; shown++; } else { r.style.display='none'; }
+    });
+    document.getElementById('userCount').textContent = shown;
+}
+document.getElementById('userFilter').addEventListener('input', applyFilter);
+</script>
+<style>
+    .role-chip { padding:4px 10px; border-radius:var(--radius-md); font-size:var(--font-size-xs); font-weight:600; color:var(--white); display:inline-block; letter-spacing:.5px; }
+    .role-chip-admin { background:linear-gradient(135deg,var(--error),#dc2626); }
+    .role-chip-operator { background:linear-gradient(135deg,var(--warning),#d97706); }
+    .role-chip-user { background:linear-gradient(135deg,var(--info),#1d4ed8); }
+</style>
+<!-- Modal Create User -->
+<div id="createUserModal" style="position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.45);z-index:2000;">
+    <div style="background:var(--white);width:100%;max-width:480px;padding:var(--space-8);border-radius:var(--radius-xl);box-shadow:var(--shadow-xl);position:relative;animation:fadeInUp .3s ease;">
+        <button onclick="closeCreateModal()" style="position:absolute;top:14px;right:14px;border:none;background:transparent;color:var(--gray-400);cursor:pointer;font-size:1.1rem;">
+            <i class="fas fa-times"></i>
+        </button>
+        <h3 style="margin:0 0 var(--space-4);display:flex;align-items:center;gap:var(--space-2);color:var(--gray-800);font-size:var(--font-size-xl);">
+            <i class="fas fa-user-plus" style="color:var(--primary);"></i> Новый пользователь
+        </h3>
+        <form method="post" action="{{ url_for('admin.admin_user_create') }}" style="display:flex;flex-direction:column;gap:var(--space-4);">
+            <div>
+                <label style="display:block;font-size:var(--font-size-xs);font-weight:600;color:var(--gray-600);margin-bottom:4px;">Логин</label>
+                <input required name="username" type="text" style="width:100%;padding:12px 14px;border:1px solid var(--gray-300);border-radius:var(--radius-md);font-size:var(--font-size-sm);">
+            </div>
+            <div>
+                <label style="display:block;font-size:var(--font-size-xs);font-weight:600;color:var(--gray-600);margin-bottom:4px;">Пароль</label>
+                <input required name="password" type="password" style="width:100%;padding:12px 14px;border:1px solid var(--gray-300);border-radius:var(--radius-md);font-size:var(--font-size-sm);">
+            </div>
+            <div style="display:flex;gap:var(--space-4);">
+                <div style="flex:1;">
+                    <label style="display:block;font-size:var(--font-size-xs);font-weight:600;color:var(--gray-600);margin-bottom:4px;">Email (опц.)</label>
+                    <input name="email" type="email" style="width:100%;padding:12px 14px;border:1px solid var(--gray-300);border-radius:var(--radius-md);font-size:var(--font-size-sm);">
+                </div>
+                <div style="width:140px;">
+                    <label style="display:block;font-size:var(--font-size-xs);font-weight:600;color:var(--gray-600);margin-bottom:4px;">Роль</label>
+                    <select name="role" style="width:100%;padding:12px 14px;border:1px solid var(--gray-300);border-radius:var(--radius-md);font-size:var(--font-size-sm);background:var(--white);">
+                        <option value="USER">USER</option>
+                        <option value="OPERATOR" selected>OPERATOR</option>
+                        <option value="ADMIN">ADMIN</option>
+                    </select>
+                </div>
+            </div>
+            <div style="display:flex;justify-content:flex-end;gap:var(--space-3);margin-top:var(--space-2);">
+                <button type="button" onclick="closeCreateModal()" class="btn btn-outline btn-sm">Отмена</button>
+                <button type="submit" class="btn btn-sm"><i class="fas fa-save"></i> Сохранить</button>
+            </div>
+        </form>
     </div>
 </div>
 <script>
-const filter = document.getElementById('userFilter');
-const table = document.getElementById('userTable');
-const userCount = document.getElementById('userCount');
-filter.addEventListener('input', function() {
-    let val = this.value.toLowerCase();
-    let rows = table.querySelectorAll('tbody tr');
-    let shown = 0;
-    rows.forEach(r => {
-        let name = r.children[1].textContent.toLowerCase();
-        if(name.includes(val)) { r.style.display=''; shown++; }
-        else { r.style.display='none'; }
-    });
-    userCount.textContent = shown;
-});
+    function openCreateModal(){ document.getElementById('createUserModal').style.display='flex'; }
+    function closeCreateModal(){ document.getElementById('createUserModal').style.display='none'; }
+    document.addEventListener('keydown', e=>{ if(e.key==='Escape') closeCreateModal(); });
 </script>
 {% endblock %}

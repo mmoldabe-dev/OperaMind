@@ -1,0 +1,67 @@
+{% extends 'base.html' %}
+{% block title %}История пользователя {{ target_user.username }} - OperaMind{% endblock %}
+{% block content %}
+<div class="card" style="animation:fadeInUp .4s ease;">
+  <div class="card-header" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:var(--space-4);">
+    <div>
+      <h2 class="card-title" style="display:flex;align-items:center;gap:var(--space-2);"><i class="fas fa-history" style="color:var(--primary);"></i> История разговоров: {{ target_user.username }}</h2>
+      <div class="card-subtitle">Всего разговоров: {{ conversations|length }}</div>
+    </div>
+    <div style="display:flex;gap:var(--space-3);">
+      <a href="{{ url_for('admin.admin_users') }}" class="btn btn-outline btn-sm"><i class="fas fa-arrow-left"></i> Назад</a>
+      <a href="{{ url_for('admin.admin_user_stats', user_id=target_user.id) }}" class="btn btn-sm"><i class="fas fa-chart-line"></i> Статистика</a>
+    </div>
+  </div>
+  {% if conversations %}
+  <div class="table-container" style="overflow-x:auto;">
+    <table class="table">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Файл</th>
+          <th>Дата</th>
+          <th>Статус</th>
+          <th>Анализ</th>
+          <th>Действия</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for c in conversations %}
+        <tr>
+          <td style="font-size:var(--font-size-xs);color:var(--gray-500);">{{ c.id }}</td>
+          <td style="font-weight:600;">{{ c.filename }}</td>
+          <td style="font-size:var(--font-size-xs);white-space:nowrap;">{{ c.upload_date.strftime('%d.%m.%Y %H:%M') }}</td>
+          <td>
+            <span class="status-chip status-{{ c.status }}">{{ c.status_display }}</span>
+          </td>
+          <td>
+            {% if c.analysis %}
+              <span style="color:var(--success);font-size:var(--font-size-xs);font-weight:600;">Готово</span>
+            {% else %}
+              <span style="color:var(--gray-400);font-size:var(--font-size-xs);">—</span>
+            {% endif %}
+          </td>
+          <td style="display:flex;gap:6px;flex-wrap:wrap;">
+            <a class="btn btn-sm btn-outline" href="{{ url_for('conversation_detail', conversation_id=c.id) }}" target="_blank" title="Открыть детали"><i class="fas fa-eye"></i></a>
+            {% if c.analysis %}
+            <a class="btn btn-sm btn-secondary" href="{{ url_for('download_report', conversation_id=c.id) }}" title="Скачать отчёт"><i class="fas fa-download"></i></a>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+    <div style="padding:var(--space-8);text-align:center;color:var(--gray-500);">Нет разговоров</div>
+  {% endif %}
+</div>
+{% endblock %}
+<style>
+  .status-chip { display:inline-flex;align-items:center;gap:6px;color:var(--white);padding:4px 10px;border-radius:20px;font-size:var(--font-size-xs);font-weight:600;letter-spacing:.3px; }
+  .status-completed { background:var(--success); }
+  .status-error { background:var(--error); }
+  .status-analyzing { background:var(--warning); }
+  .status-transcribing { background:var(--info); }
+  .status-pending { background:var(--gray-400); }
+</style>

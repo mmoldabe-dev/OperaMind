@@ -1,233 +1,664 @@
-{% extends "base.html" %}
+{% extends "base.html" %}{% extends "base.html" %}
 
-{% block title %}{{ conversation.filename }} - OperaMind{% endblock %}
 
-{% block content %}
-<div style="margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center;">
-    <a href="{{ url_for('history') }}" style="color: #667eea; text-decoration: none; font-weight: 500;">
-        ← Назад к истории
+
+{% block title %}{{ conversation.filename }} - OperaMind{% endblock %}{% block title %}{{ conversation.filename }} - OperaMind{% endblock %}
+
+
+
+{% block content %}{% block content %}
+
+<!-- Header --><div style="margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center;">
+
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--space-6);">    <a href="{{ url_for('history') }}" style="color: #667eea; text-decoration: none; font-weight: 500;">
+
+    <a href="{{ url_for('history') }}" class="btn btn-outline">        ← Назад к истории
+
+        <i class="fas fa-arrow-left"></i>    </a>
+
+        Назад к истории    
+
+    </a>    {% if conversation.analysis %}
+
+        <a href="{{ url_for('download_report', conversation_id=conversation.id) }}" class="btn" style="background: #27ae60;">
+
+    {% if conversation.analysis %}        📥 Скачать отчёт
+
+    <a href="{{ url_for('download_report', conversation_id=conversation.id) }}" class="btn btn-success">    </a>
+
+        <i class="fas fa-download"></i>    {% endif %}
+
+        Скачать отчёт</div>
+
     </a>
-    
-    {% if conversation.analysis %}
-    <a href="{{ url_for('download_report', conversation_id=conversation.id) }}" class="btn" style="background: #27ae60;">
-        📥 Скачать отчёт
-    </a>
-    {% endif %}
-</div>
 
-<div class="card">
-    <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 25px;">
+    {% endif %}<div class="card">
+
+</div>    <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 25px;">
+
         <div>
-            <h2 style="color: #2c3e50; margin-bottom: 10px;">📞 {{ conversation.filename }}</h2>
-            <p style="color: #7f8c8d;">
-                Загружено: {{ conversation.upload_date.strftime('%d.%m.%Y в %H:%M') }}
-            </p>
-            <p style="margin-top: 10px;">
-                Статус: 
-                {% if conversation.status == 'completed' %}
-                    <span style="background: #27ae60; color: white; padding: 4px 12px; border-radius: 12px;">✅ Завершено</span>
-                {% elif conversation.status == 'transcribing' %}
-                    <span style="background: #3498db; color: white; padding: 4px 12px; border-radius: 12px;">🎧 Транскрипция...</span>
-                {% elif conversation.status == 'analyzing' %}
-                    <span style="background: #f39c12; color: white; padding: 4px 12px; border-radius: 12px;">🤖 Анализ...</span>
-                {% elif conversation.status == 'error' %}
-                    <span style="background: #e74c3c; color: white; padding: 4px 12px; border-radius: 12px;">❌ Ошибка</span>
-                {% else %}
-                    <span style="background: #95a5a6; color: white; padding: 4px 12px; border-radius: 12px;">⏳ Ожидает</span>
-                {% endif %}
-            </p>
-        </div>
-        <form method="POST" action="{{ url_for('delete_conversation', conversation_id=conversation.id) }}" 
-              onsubmit="return confirm('Удалить этот разговор?');">
-            <button type="submit" class="btn btn-danger">🗑️ Удалить</button>
-        </form>
-    </div>
 
-    {% if conversation.analysis %}
-    <!-- ОСНОВНЫЕ МЕТРИКИ -->
-    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 30px;">
-        <div style="background: linear-gradient(135deg, #667eea15 0%, #764ba215 100%); padding: 20px; border-radius: 10px;">
-            <p style="color: #7f8c8d; font-size: 0.9rem; margin-bottom: 5px;">ТЕМА</p>
-            <p style="color: #2c3e50; font-weight: 600; font-size: 1.1rem;">{{ conversation.analysis.topic }}</p>
-        </div>
+<!-- File Info Card -->            <h2 style="color: #2c3e50; margin-bottom: 10px;">📞 {{ conversation.filename }}</h2>
 
-        <div style="background: linear-gradient(135deg, #667eea15 0%, #764ba215 100%); padding: 20px; border-radius: 10px;">
-            <p style="color: #7f8c8d; font-size: 0.9rem; margin-bottom: 5px;">КАТЕГОРИЯ</p>
-            <p style="color: #2c3e50; font-weight: 600; font-size: 1.1rem;">{{ conversation.analysis.category }}</p>
-        </div>
+<div class="card" style="margin-bottom: var(--space-6);">            <p style="color: #7f8c8d;">
 
-        <div style="background: linear-gradient(135deg, #667eea15 0%, #764ba215 100%); padding: 20px; border-radius: 10px;">
-            <p style="color: #7f8c8d; font-size: 0.9rem; margin-bottom: 5px;">ТОНАЛЬНОСТЬ</p>
-            {% if conversation.analysis.sentiment == 'позитивный' %}
-                <p style="font-weight: 600; font-size: 1.1rem; color: #27ae60;">{{ conversation.analysis.sentiment }}</p>
-            {% elif conversation.analysis.sentiment == 'негативный' %}
-                <p style="font-weight: 600; font-size: 1.1rem; color: #e74c3c;">{{ conversation.analysis.sentiment }}</p>
-            {% else %}
-                <p style="font-weight: 600; font-size: 1.1rem; color: #f39c12;">{{ conversation.analysis.sentiment }}</p>
+    <div class="card-header">                Загружено: {{ conversation.upload_date.strftime('%d.%m.%Y в %H:%M') }}
+
+        <div style="display: flex; justify-content: space-between; align-items: start;">            </p>
+
+            <div>            <p style="margin-top: 10px;">
+
+                <h1 class="card-title">                Статус: 
+
+                    <i class="fas fa-phone-volume" style="color: var(--primary);"></i>                {% if conversation.status == 'completed' %}
+
+                    {{ conversation.filename }}                    <span style="background: #27ae60; color: white; padding: 4px 12px; border-radius: 12px;">✅ Завершено</span>
+
+                </h1>                {% elif conversation.status == 'transcribing' %}
+
+                <div style="display: flex; gap: var(--space-4); margin-top: var(--space-3);">                    <span style="background: #3498db; color: white; padding: 4px 12px; border-radius: 12px;">🎧 Транскрипция...</span>
+
+                    <div style="display: flex; align-items: center; gap: var(--space-2); color: var(--gray-600);">                {% elif conversation.status == 'analyzing' %}
+
+                        <i class="fas fa-calendar"></i>                    <span style="background: #f39c12; color: white; padding: 4px 12px; border-radius: 12px;">🤖 Анализ...</span>
+
+                        <span>{{ conversation.upload_date.strftime('%d.%m.%Y в %H:%M') }}</span>                {% elif conversation.status == 'error' %}
+
+                    </div>                    <span style="background: #e74c3c; color: white; padding: 4px 12px; border-radius: 12px;">❌ Ошибка</span>
+
+                    <div style="display: flex; align-items: center; gap: var(--space-2); color: var(--gray-600);">                {% else %}
+
+                        <i class="fas fa-user"></i>                    <span style="background: #95a5a6; color: white; padding: 4px 12px; border-radius: 12px;">⏳ Ожидает</span>
+
+                        <span>{{ conversation.user.username }}</span>                {% endif %}
+
+                    </div>            </p>
+
+                    {% if conversation.file_size %}        </div>
+
+                    <div style="display: flex; align-items: center; gap: var(--space-2); color: var(--gray-600);">        <form method="POST" action="{{ url_for('delete_conversation', conversation_id=conversation.id) }}" 
+
+                        <i class="fas fa-hdd"></i>              onsubmit="return confirm('Удалить этот разговор?');">
+
+                        <span>{{ conversation.file_size_display }}</span>            <button type="submit" class="btn btn-danger">🗑️ Удалить</button>
+
+                    </div>        </form>
+
+                    {% endif %}    </div>
+
+                </div>
+
+                    {% if conversation.analysis %}
+
+                <!-- Status Badge -->    <!-- ОСНОВНЫЕ МЕТРИКИ -->
+
+                <div style="margin-top: var(--space-4);">    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 30px;">
+
+                    {% set status_colors = {        <div style="background: linear-gradient(135deg, #667eea15 0%, #764ba215 100%); padding: 20px; border-radius: 10px;">
+
+                        'completed': 'var(--success)',            <p style="color: #7f8c8d; font-size: 0.9rem; margin-bottom: 5px;">ТЕМА</p>
+
+                        'transcribing': 'var(--info)',            <p style="color: #2c3e50; font-weight: 600; font-size: 1.1rem;">{{ conversation.analysis.topic }}</p>
+
+                        'analyzing': 'var(--warning)',        </div>
+
+                        'error': 'var(--error)',
+
+                        'pending': 'var(--gray-500)'        <div style="background: linear-gradient(135deg, #667eea15 0%, #764ba215 100%); padding: 20px; border-radius: 10px;">
+
+                    } %}            <p style="color: #7f8c8d; font-size: 0.9rem; margin-bottom: 5px;">КАТЕГОРИЯ</p>
+
+                    {% set status_icons = {            <p style="color: #2c3e50; font-weight: 600; font-size: 1.1rem;">{{ conversation.analysis.category }}</p>
+
+                        'completed': 'fas fa-check-circle',        </div>
+
+                        'transcribing': 'fas fa-microphone',
+
+                        'analyzing': 'fas fa-brain',        <div style="background: linear-gradient(135deg, #667eea15 0%, #764ba215 100%); padding: 20px; border-radius: 10px;">
+
+                        'error': 'fas fa-exclamation-circle',            <p style="color: #7f8c8d; font-size: 0.9rem; margin-bottom: 5px;">ТОНАЛЬНОСТЬ</p>
+
+                        'pending': 'fas fa-clock'            {% if conversation.analysis.sentiment == 'позитивный' %}
+
+                    } %}                <p style="font-weight: 600; font-size: 1.1rem; color: #27ae60;">{{ conversation.analysis.sentiment }}</p>
+
+                    <span style="background: {{ status_colors.get(conversation.status, 'var(--gray-500)') }}; color: var(--white); padding: var(--space-2) var(--space-4); border-radius: var(--radius-lg); font-weight: 600; font-size: var(--font-size-sm);">            {% elif conversation.analysis.sentiment == 'негативный' %}
+
+                        <i class="{{ status_icons.get(conversation.status, 'fas fa-question') }}"></i>                <p style="font-weight: 600; font-size: 1.1rem; color: #e74c3c;">{{ conversation.analysis.sentiment }}</p>
+
+                        {{ conversation.status_display }}            {% else %}
+
+                    </span>                <p style="font-weight: 600; font-size: 1.1rem; color: #f39c12;">{{ conversation.analysis.sentiment }}</p>
+
+                </div>            {% endif %}
+
+            </div>        </div>
+
+            
+
+            <form method="POST" action="{{ url_for('delete_conversation', conversation_id=conversation.id) }}"         <div style="background: linear-gradient(135deg, #667eea15 0%, #764ba215 100%); padding: 20px; border-radius: 10px;">
+
+                  onsubmit="return confirm('Удалить этот разговор?');">            <p style="color: #7f8c8d; font-size: 0.9rem; margin-bottom: 5px;">СРОЧНОСТЬ</p>
+
+                <button type="submit" class="btn btn-danger">            {% if conversation.analysis.urgency == 'критическая' %}
+
+                    <i class="fas fa-trash"></i>                <p style="font-weight: 600; font-size: 1.1rem; color: #e74c3c;">{{ conversation.analysis.urgency }}</p>
+
+                    Удалить            {% elif conversation.analysis.urgency == 'высокая' %}
+
+                </button>                <p style="font-weight: 600; font-size: 1.1rem; color: #f39c12;">{{ conversation.analysis.urgency }}</p>
+
+            </form>            {% elif conversation.analysis.urgency == 'средняя' %}
+
+        </div>                <p style="font-weight: 600; font-size: 1.1rem; color: #3498db;">{{ conversation.analysis.urgency }}</p>
+
+    </div>            {% else %}
+
+</div>                <p style="font-weight: 600; font-size: 1.1rem; color: #95a5a6;">{{ conversation.analysis.urgency }}</p>
+
             {% endif %}
-        </div>
 
-        <div style="background: linear-gradient(135deg, #667eea15 0%, #764ba215 100%); padding: 20px; border-radius: 10px;">
-            <p style="color: #7f8c8d; font-size: 0.9rem; margin-bottom: 5px;">СРОЧНОСТЬ</p>
-            {% if conversation.analysis.urgency == 'критическая' %}
-                <p style="font-weight: 600; font-size: 1.1rem; color: #e74c3c;">{{ conversation.analysis.urgency }}</p>
-            {% elif conversation.analysis.urgency == 'высокая' %}
-                <p style="font-weight: 600; font-size: 1.1rem; color: #f39c12;">{{ conversation.analysis.urgency }}</p>
-            {% elif conversation.analysis.urgency == 'средняя' %}
-                <p style="font-weight: 600; font-size: 1.1rem; color: #3498db;">{{ conversation.analysis.urgency }}</p>
-            {% else %}
-                <p style="font-weight: 600; font-size: 1.1rem; color: #95a5a6;">{{ conversation.analysis.urgency }}</p>
-            {% endif %}
-        </div>
-    </div>
+{% if conversation.analysis %}        </div>
 
-    <!-- КАЧЕСТВО ОПЕРАТОРА -->
-    {% if conversation.analysis.operator_quality %}
-    <div style="background: #f8f9ff; padding: 20px; border-radius: 10px; margin-bottom: 25px; border-left: 4px solid #667eea;">
-        <h3 style="color: #2c3e50; margin-bottom: 10px;">⭐ Качество работы оператора</h3>
-        <p style="font-size: 1.2rem; font-weight: 600; color: #667eea;">{{ conversation.analysis.operator_quality }}</p>
-    </div>
-    {% endif %}
+<!-- Analysis Dashboard -->    </div>
 
-    <!-- КРАТКОЕ СОДЕРЖАНИЕ -->
-    <div style="background: #f8f9ff; padding: 25px; border-radius: 10px; margin-bottom: 25px; border-left: 4px solid #667eea;">
-        <h3 style="color: #2c3e50; margin-bottom: 15px;">📝 Краткое содержание</h3>
-        <p style="color: #555; line-height: 1.8;">{{ conversation.analysis.summary }}</p>
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: var(--space-6); margin-bottom: var(--space-8);">
+
+    <!-- Topic Card -->    <!-- КАЧЕСТВО ОПЕРАТОРА -->
+
+    <div class="stat-card">    {% if conversation.analysis.operator_quality %}
+
+        <div style="display: flex; align-items: center; gap: var(--space-3); margin-bottom: var(--space-3);">    <div style="background: #f8f9ff; padding: 20px; border-radius: 10px; margin-bottom: 25px; border-left: 4px solid #667eea;">
+
+            <div style="background: var(--primary); color: var(--white); width: 48px; height: 48px; border-radius: var(--radius-lg); display: flex; align-items: center; justify-content: center;">        <h3 style="color: #2c3e50; margin-bottom: 10px;">⭐ Качество работы оператора</h3>
+
+                <i class="fas fa-comment-dots"></i>        <p style="font-size: 1.2rem; font-weight: 600; color: #667eea;">{{ conversation.analysis.operator_quality }}</p>
+
+            </div>    </div>
+
+            <div>    {% endif %}
+
+                <div class="stat-label">ТЕМА РАЗГОВОРА</div>
+
+                <div style="font-size: var(--font-size-lg); font-weight: 600; color: var(--gray-800);">    <!-- КРАТКОЕ СОДЕРЖАНИЕ -->
+
+                    {{ conversation.analysis.topic or 'Не определена' }}    <div style="background: #f8f9ff; padding: 25px; border-radius: 10px; margin-bottom: 25px; border-left: 4px solid #667eea;">
+
+                </div>        <h3 style="color: #2c3e50; margin-bottom: 15px;">📝 Краткое содержание</h3>
+
+            </div>        <p style="color: #555; line-height: 1.8;">{{ conversation.analysis.summary }}</p>
+
+        </div>    </div>
+
     </div>
 
     <!-- ПОДРОБНЫЙ АНАЛИЗ -->
-    {% if conversation.analysis.detailed_analysis %}
-    <div style="background: #fff3cd; padding: 25px; border-radius: 10px; margin-bottom: 25px; border-left: 4px solid #ffc107;">
-        <h3 style="color: #2c3e50; margin-bottom: 15px;">🔍 Подробный анализ</h3>
-        <p style="color: #555; line-height: 1.8; white-space: pre-line;">{{ conversation.analysis.detailed_analysis }}</p>
-    </div>
-    {% endif %}
 
-    <!-- РЕКОМЕНДАЦИИ -->
-    {% if conversation.analysis.recommendations %}
-    <div style="background: #d4edda; padding: 25px; border-radius: 10px; margin-bottom: 25px; border-left: 4px solid #28a745;">
-        <h3 style="color: #2c3e50; margin-bottom: 15px;">💡 Рекомендации</h3>
-        <p style="color: #555; line-height: 1.8; white-space: pre-line;">{{ conversation.analysis.recommendations }}</p>
-    </div>
-    {% endif %}
+    <!-- Category Card -->    {% if conversation.analysis.detailed_analysis %}
 
-    <!-- КЛЮЧЕВЫЕ СЛОВА -->
-    <div style="margin-bottom: 25px;">
-        <h3 style="color: #2c3e50; margin-bottom: 15px;">🔑 Ключевые слова</h3>
-        <div style="display: flex; flex-wrap: wrap; gap: 10px;">
-            {% if conversation.analysis.keywords %}
-                {% set keywords = conversation.analysis.keywords|from_json %}
-                {% for keyword in keywords %}
-                <span style="background: #667eea; color: white; padding: 8px 16px; border-radius: 20px; font-weight: 500;">
-                    {{ keyword }}
-                </span>
-                {% endfor %}
-            {% endif %}
-        </div>
-    </div>
+    <div class="stat-card">    <div style="background: #fff3cd; padding: 25px; border-radius: 10px; margin-bottom: 25px; border-left: 4px solid #ffc107;">
 
-    <!-- ПОЛНАЯ ТРАНСКРИПЦИЯ (СТРУКТУРИРОВАННАЯ) -->
-    <div style="background: #f8f9fa; padding: 25px; border-radius: 10px;">
-        <h3 style="color: #2c3e50; margin-bottom: 15px;">� Полная транскрипция (Диалог)</h3>
-        {% set is_json = False %}
-        {% set structured = None %}
-        {% if conversation.analysis.transcript %}
-            {% set raw = conversation.analysis.transcript %}
-            {% if raw.startswith('{') %}
-                {% set is_json = True %}
-                {% set structured = raw|from_json %}
-            {% endif %}
+        <div style="display: flex; align-items: center; gap: var(--space-3); margin-bottom: var(--space-3);">        <h3 style="color: #2c3e50; margin-bottom: 15px;">🔍 Подробный анализ</h3>
+
+            <div style="background: var(--accent); color: var(--white); width: 48px; height: 48px; border-radius: var(--radius-lg); display: flex; align-items: center; justify-content: center;">        <p style="color: #555; line-height: 1.8; white-space: pre-line;">{{ conversation.analysis.detailed_analysis }}</p>
+
+                <i class="fas fa-tags"></i>    </div>
+
+            </div>    {% endif %}
+
+            <div>
+
+                <div class="stat-label">КАТЕГОРИЯ</div>    <!-- РЕКОМЕНДАЦИИ -->
+
+                <div style="font-size: var(--font-size-lg); font-weight: 600; color: var(--gray-800);">    {% if conversation.analysis.recommendations %}
+
+                    {{ conversation.analysis.category or 'Не определена' }}    <div style="background: #d4edda; padding: 25px; border-radius: 10px; margin-bottom: 25px; border-left: 4px solid #28a745;">
+
+                </div>        <h3 style="color: #2c3e50; margin-bottom: 15px;">💡 Рекомендации</h3>
+
+            </div>        <p style="color: #555; line-height: 1.8; white-space: pre-line;">{{ conversation.analysis.recommendations }}</p>
+
+        </div>    </div>
+
+    </div>    {% endif %}
+
+
+
+    <!-- Sentiment Card -->    <!-- КЛЮЧЕВЫЕ СЛОВА -->
+
+    <div class="stat-card">    <div style="margin-bottom: 25px;">
+
+        <div style="display: flex; align-items: center; gap: var(--space-3); margin-bottom: var(--space-3);">        <h3 style="color: #2c3e50; margin-bottom: 15px;">🔑 Ключевые слова</h3>
+
+            {% set sentiment_colors = {        <div style="display: flex; flex-wrap: wrap; gap: 10px;">
+
+                'positive': 'var(--success)',            {% if conversation.analysis.keywords %}
+
+                'negative': 'var(--error)',                {% set keywords = conversation.analysis.keywords|from_json %}
+
+                'neutral': 'var(--info)',                {% for keyword in keywords %}
+
+                'mixed': 'var(--warning)'                <span style="background: #667eea; color: white; padding: 8px 16px; border-radius: 20px; font-weight: 500;">
+
+            } %}                    {{ keyword }}
+
+            {% set sentiment_icons = {                </span>
+
+                'positive': 'fas fa-smile',                {% endfor %}
+
+                'negative': 'fas fa-frown',            {% endif %}
+
+                'neutral': 'fas fa-meh',        </div>
+
+                'mixed': 'fas fa-meh-rolling-eyes'    </div>
+
+            } %}
+
+            <div style="background: {{ sentiment_colors.get(conversation.analysis.sentiment, 'var(--gray-500)') }}; color: var(--white); width: 48px; height: 48px; border-radius: var(--radius-lg); display: flex; align-items: center; justify-content: center;">    <!-- ПОЛНАЯ ТРАНСКРИПЦИЯ (СТРУКТУРИРОВАННАЯ) -->
+
+                <i class="{{ sentiment_icons.get(conversation.analysis.sentiment, 'fas fa-question') }}"></i>    <div style="background: #f8f9fa; padding: 25px; border-radius: 10px;">
+
+            </div>        <h3 style="color: #2c3e50; margin-bottom: 15px;">� Полная транскрипция (Диалог)</h3>
+
+            <div>        {% set is_json = False %}
+
+                <div class="stat-label">ТОНАЛЬНОСТЬ</div>        {% set structured = None %}
+
+                <div style="font-size: var(--font-size-lg); font-weight: 600; color: {{ sentiment_colors.get(conversation.analysis.sentiment, 'var(--gray-800)') }};">        {% if conversation.analysis.transcript %}
+
+                    {{ conversation.analysis.sentiment_display }}            {% set raw = conversation.analysis.transcript %}
+
+                </div>            {% if raw.startswith('{') %}
+
+            </div>                {% set is_json = True %}
+
+        </div>                {% set structured = raw|from_json %}
+
+    </div>            {% endif %}
+
         {% endif %}
-        {% if is_json and structured and structured.segments %}
-        <div style="display:flex; gap:20px; flex-wrap:wrap; margin-bottom:15px;">
-            <div style="background:#eef2ff;padding:8px 14px;border-radius:20px;font-size:0.85rem;">Метод: {{ structured.meta.method if structured.meta and structured.meta.method }}</div>
-            <div style="background:#eef2ff;padding:8px 14px;border-radius:20px;font-size:0.85rem;">Длительность: {{ structured.meta.duration_sec }} c</div>
-        </div>
-        <div style="display:flex; gap:12px; flex-wrap:wrap; margin-bottom:10px; font-size:0.65rem;">
-            <span style="background:#6366f1;color:white;padding:4px 10px;border-radius:14px;">CL Клиент</span>
-            <span style="background:#10b981;color:white;padding:4px 10px;border-radius:14px;">OP Оператор</span>
-            <span style="background:#fde68a;color:#92400e;padding:4px 10px;border-radius:14px;">Пауза &gt; 0.4 c</span>
-            <span style="background:#eef2ff;color:#4338ca;padding:4px 10px;border-radius:14px;">Слова с таймкодами</span>
-        </div>
-        <style>
-            #chat .seg.silence { opacity:0.75; }
-            #chat .seg.silence .bubble { background:#fffdf5; border-color:#f7e7c2; font-style:italic; }
-            #chat .seg.silence .bubble:before { content:'⏸️'; margin-right:6px; }
-        </style>
-        <div id="chat" style="background: white; padding: 20px; border-radius: 8px; max-height: 600px; overflow-y: auto; color:#2c3e50;">
-            {% for seg in structured.segments %}
-                {% set seg_type = seg.segment_type if 'segment_type' in seg else ('speech') %}
-                <div class="seg {% if seg_type=='silence' %}silence{% endif %}" style="margin-bottom:18px; display:flex; gap:14px; align-items:flex-start;">
-                    <div style="width:52px;text-align:center;">
+
+    <!-- Urgency Card -->        {% if is_json and structured and structured.segments %}
+
+    <div class="stat-card">        <div style="display:flex; gap:20px; flex-wrap:wrap; margin-bottom:15px;">
+
+        <div style="display: flex; align-items: center; gap: var(--space-3); margin-bottom: var(--space-3);">            <div style="background:#eef2ff;padding:8px 14px;border-radius:20px;font-size:0.85rem;">Метод: {{ structured.meta.method if structured.meta and structured.meta.method }}</div>
+
+            {% set urgency_colors = {            <div style="background:#eef2ff;padding:8px 14px;border-radius:20px;font-size:0.85rem;">Длительность: {{ structured.meta.duration_sec }} c</div>
+
+                'critical': 'var(--error)',        </div>
+
+                'high': 'var(--warning)',        <div style="display:flex; gap:12px; flex-wrap:wrap; margin-bottom:10px; font-size:0.65rem;">
+
+                'medium': 'var(--info)',            <span style="background:#6366f1;color:white;padding:4px 10px;border-radius:14px;">CL Клиент</span>
+
+                'low': 'var(--success)'            <span style="background:#10b981;color:white;padding:4px 10px;border-radius:14px;">OP Оператор</span>
+
+            } %}            <span style="background:#fde68a;color:#92400e;padding:4px 10px;border-radius:14px;">Пауза &gt; 0.4 c</span>
+
+            <div style="background: {{ urgency_colors.get(conversation.analysis.urgency, 'var(--gray-500)') }}; color: var(--white); width: 48px; height: 48px; border-radius: var(--radius-lg); display: flex; align-items: center; justify-content: center;">            <span style="background:#eef2ff;color:#4338ca;padding:4px 10px;border-radius:14px;">Слова с таймкодами</span>
+
+                <i class="fas fa-exclamation-triangle"></i>        </div>
+
+            </div>        <style>
+
+            <div>            #chat .seg.silence { opacity:0.75; }
+
+                <div class="stat-label">СРОЧНОСТЬ</div>            #chat .seg.silence .bubble { background:#fffdf5; border-color:#f7e7c2; font-style:italic; }
+
+                <div style="font-size: var(--font-size-lg); font-weight: 600; color: {{ urgency_colors.get(conversation.analysis.urgency, 'var(--gray-800)') }};">            #chat .seg.silence .bubble:before { content:'⏸️'; margin-right:6px; }
+
+                    {{ conversation.analysis.urgency_display }}        </style>
+
+                </div>        <div id="chat" style="background: white; padding: 20px; border-radius: 8px; max-height: 600px; overflow-y: auto; color:#2c3e50;">
+
+            </div>            {% for seg in structured.segments %}
+
+        </div>                {% set seg_type = seg.segment_type if 'segment_type' in seg else ('speech') %}
+
+    </div>                <div class="seg {% if seg_type=='silence' %}silence{% endif %}" style="margin-bottom:18px; display:flex; gap:14px; align-items:flex-start;">
+
+</div>                    <div style="width:52px;text-align:center;">
+
                         {% if seg.speaker == 'client' %}
-                            <div style="background:#6366f1;color:white;width:42px;height:42px;display:flex;align-items:center;justify-content:center;border-radius:50%;font-size:0.75rem;">CL</div>
-                        {% elif seg.speaker == 'operator' %}
-                            <div style="background:#10b981;color:white;width:42px;height:42px;display:flex;align-items:center;justify-content:center;border-radius:50%;font-size:0.75rem;">OP</div>
-                        {% else %}
-                            <div style="background:#9ca3af;color:white;width:42px;height:42px;display:flex;align-items:center;justify-content:center;border-radius:50%;font-size:0.75rem;">UK</div>
-                        {% endif %}
-                        <div style="margin-top:6px;font-size:0.65rem;color:#6b7280;">{{ seg.start }}s</div>
-                    </div>
-                    <div style="flex:1;">
-                        <div style="display:flex;align-items:center;gap:10px; margin-bottom:6px;">
-                            <strong style="font-size:0.9rem;">
-                                {% if seg.speaker == 'client' %}Клиент{% elif seg.speaker == 'operator' %}Оператор{% else %}Неизвестно{% endif %}
-                            </strong>
-                            <span style="background:#f3f4f6;padding:2px 8px;border-radius:12px;font-size:0.65rem;color:#374151;">{{ seg.start }} – {{ seg.end }} c</span>
-                            {% if seg.gap_from_prev and seg.gap_from_prev > 0.4 %}
-                                <span style="background:#fde68a;padding:2px 6px;border-radius:12px;font-size:0.6rem;color:#92400e;">Пауза {{ seg.gap_from_prev }} c</span>
-                            {% endif %}
-                        </div>
-                        <div class="bubble" style="background:#f9fafb;border:1px solid #e5e7eb;padding:12px 14px;border-radius:10px;line-height:1.6;font-size:0.9rem; position:relative;">
-                            <div style="margin-bottom:8px; white-space:pre-wrap;">
-                                {% if seg_type=='silence' %}<em>{{ seg.text }}</em>{% else %}{{ seg.text }}{% endif %}
+
+<!-- Quality Score -->                            <div style="background:#6366f1;color:white;width:42px;height:42px;display:flex;align-items:center;justify-content:center;border-radius:50%;font-size:0.75rem;">CL</div>
+
+{% if conversation.analysis.operator_quality %}                        {% elif seg.speaker == 'operator' %}
+
+<div class="card" style="margin-bottom: var(--space-6);">                            <div style="background:#10b981;color:white;width:42px;height:42px;display:flex;align-items:center;justify-content:center;border-radius:50%;font-size:0.75rem;">OP</div>
+
+    <div class="card-header">                        {% else %}
+
+        <h3 class="card-title">                            <div style="background:#9ca3af;color:white;width:42px;height:42px;display:flex;align-items:center;justify-content:center;border-radius:50%;font-size:0.75rem;">UK</div>
+
+            <i class="fas fa-star" style="color: var(--warning);"></i>                        {% endif %}
+
+            Качество работы оператора                        <div style="margin-top:6px;font-size:0.65rem;color:#6b7280;">{{ seg.start }}s</div>
+
+        </h3>                    </div>
+
+    </div>                    <div style="flex:1;">
+
+    <div style="padding: var(--space-6); background: linear-gradient(135deg, var(--warning) 5%, transparent 100%); border-radius: var(--radius-lg); border-left: 4px solid var(--warning);">                        <div style="display:flex;align-items:center;gap:10px; margin-bottom:6px;">
+
+        <div style="font-size: var(--font-size-2xl); font-weight: 700; color: var(--warning); margin-bottom: var(--space-2);">                            <strong style="font-size:0.9rem;">
+
+            {{ conversation.analysis.operator_quality }}                                {% if seg.speaker == 'client' %}Клиент{% elif seg.speaker == 'operator' %}Оператор{% else %}Неизвестно{% endif %}
+
+        </div>                            </strong>
+
+        {% if conversation.analysis.quality_score %}                            <span style="background:#f3f4f6;padding:2px 8px;border-radius:12px;font-size:0.65rem;color:#374151;">{{ seg.start }} – {{ seg.end }} c</span>
+
+        <div style="color: var(--gray-600);">                            {% if seg.gap_from_prev and seg.gap_from_prev > 0.4 %}
+
+            Оценка: {{ conversation.analysis.quality_score }}/10                                <span style="background:#fde68a;padding:2px 6px;border-radius:12px;font-size:0.6rem;color:#92400e;">Пауза {{ seg.gap_from_prev }} c</span>
+
+        </div>                            {% endif %}
+
+        {% endif %}                        </div>
+
+    </div>                        <div class="bubble" style="background:#f9fafb;border:1px solid #e5e7eb;padding:12px 14px;border-radius:10px;line-height:1.6;font-size:0.9rem; position:relative;">
+
+</div>                            <div style="margin-bottom:8px; white-space:pre-wrap;">
+
+{% endif %}                                {% if seg_type=='silence' %}<em>{{ seg.text }}</em>{% else %}{{ seg.text }}{% endif %}
+
                             </div>
+
+<!-- Summary -->                            {% if seg.words %}
+
+<div class="card" style="margin-bottom: var(--space-6);">                                <div style="display:flex; flex-wrap:wrap; gap:4px; margin-top:6px;">
+
+    <div class="card-header">                                    {% for w in seg.words %}
+
+        <h3 class="card-title">                                        <span class="word" data-start="{{ w.start }}" data-end="{{ w.end }}" title="{{ w.start }}–{{ w.end }} c" style="background:#eef2ff;color:#4338ca;padding:3px 6px;border-radius:6px;font-size:0.6rem; cursor:help; transition:background .3s;">{{ w.w }}</span>
+
+            <i class="fas fa-file-alt" style="color: var(--info);"></i>                                    {% endfor %}
+
+            Краткое содержание                                </div>
+
+        </h3>                            {% endif %}
+
+    </div>                        </div>
+
+    <div style="padding: var(--space-6); background: linear-gradient(135deg, var(--info) 5%, transparent 100%); border-radius: var(--radius-lg); border-left: 4px solid var(--info); line-height: 1.8; color: var(--gray-700);">                    </div>
+
+        {{ conversation.analysis.summary or 'Краткое содержание недоступно' }}                </div>
+
+    </div>            {% endfor %}
+
+</div>        </div>
+
+        <script>
+
+<!-- Detailed Analysis -->            // Hover подсветка сегментов
+
+{% if conversation.analysis.detailed_analysis %}            document.querySelectorAll('#chat .seg').forEach(seg => {
+
+<div class="card" style="margin-bottom: var(--space-6);">                seg.addEventListener('mouseenter', () => {
+
+    <div class="card-header">                    const bubble = seg.querySelector('.bubble');
+
+        <h3 class="card-title">                    if (bubble) bubble.style.boxShadow = '0 0 0 2px #667eea55, 0 4px 14px rgba(0,0,0,0.08)';
+
+            <i class="fas fa-search" style="color: var(--primary);"></i>                });
+
+            Подробный анализ                seg.addEventListener('mouseleave', () => {
+
+        </h3>                    const bubble = seg.querySelector('.bubble');
+
+    </div>                    if (bubble) bubble.style.boxShadow = 'none';
+
+    <div style="padding: var(--space-6); background: linear-gradient(135deg, var(--primary) 5%, transparent 100%); border-radius: var(--radius-lg); border-left: 4px solid var(--primary); line-height: 1.8; color: var(--gray-700); white-space: pre-line;">                });
+
+        {{ conversation.analysis.detailed_analysis }}            });
+
+    </div>            // Анимация слов при наведении
+
+</div>            document.querySelectorAll('#chat .word').forEach(w => {
+
+{% endif %}                w.addEventListener('mouseenter', () => {
+
+                    w.style.background = '#c7d2fe';
+
+<!-- Recommendations -->                });
+
+{% if conversation.analysis.recommendations %}                w.addEventListener('mouseleave', () => {
+
+<div class="card" style="margin-bottom: var(--space-6);">                    w.style.background = '#eef2ff';
+
+    <div class="card-header">                });
+
+        <h3 class="card-title">            });
+
+            <i class="fas fa-lightbulb" style="color: var(--success);"></i>        </script>
+
+            Рекомендации для улучшения        {% else %}
+
+        </h3>            <div style="background: white; padding: 20px; border-radius: 8px; max-height: 500px; overflow-y: auto; line-height: 1.8; color: #2c3e50; white-space: pre-line;">{{ conversation.analysis.transcript }}</div>
+
+    </div>        {% endif %}
+
+    <div style="padding: var(--space-6); background: linear-gradient(135deg, var(--success) 5%, transparent 100%); border-radius: var(--radius-lg); border-left: 4px solid var(--success); line-height: 1.8; color: var(--gray-700); white-space: pre-line;">    </div>
+
+        {{ conversation.analysis.recommendations }}
+
+    </div>    {% else %}
+
+</div>    <!-- НЕТ АНАЛИЗА -->
+
+{% endif %}    <div style="text-align: center; padding: 60px 20px; color: #7f8c8d;">
+
+        <p style="font-size: 3rem; margin-bottom: 20px;">⏳</p>
+
+<!-- Keywords -->        <h3 style="color: #2c3e50; margin-bottom: 10px;">Анализ в процессе</h3>
+
+{% if conversation.analysis.keywords %}        <p>Обработка файла может занять некоторое время</p>
+
+<div class="card" style="margin-bottom: var(--space-6);">    </div>
+
+    <div class="card-header">    {% endif %}
+
+        <h3 class="card-title"></div>
+
+            <i class="fas fa-key" style="color: var(--secondary);"></i>{% endblock %}
+            Ключевые слова
+        </h3>
+    </div>
+    <div style="display: flex; flex-wrap: wrap; gap: var(--space-3);">
+        {% set keywords = conversation.analysis.keywords|from_json %}
+        {% for keyword in keywords %}
+        <span style="background: linear-gradient(135deg, var(--primary), var(--secondary)); color: var(--white); padding: var(--space-2) var(--space-4); border-radius: var(--radius-lg); font-weight: 500; box-shadow: var(--shadow);">
+            {{ keyword }}
+        </span>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+
+<!-- Transcript -->
+<div class="card">
+    <div class="card-header">
+        <h3 class="card-title">
+            <i class="fas fa-comments" style="color: var(--accent);"></i>
+            Полная транскрипция
+        </h3>
+    </div>
+    
+    {% set is_json = False %}
+    {% set structured = None %}
+    {% if conversation.analysis.transcript %}
+        {% set raw = conversation.analysis.transcript %}
+        {% if raw.startswith('{') %}
+            {% set is_json = True %}
+            {% set structured = raw|from_json %}
+        {% endif %}
+    {% endif %}
+
+    {% if is_json and structured and structured.segments %}
+    <!-- Structured Transcript -->
+    <div style="margin-bottom: var(--space-4);">
+        <div style="display: flex; gap: var(--space-3); flex-wrap: wrap; margin-bottom: var(--space-4);">
+            <div style="background: var(--primary-light); padding: var(--space-2) var(--space-3); border-radius: var(--radius); font-size: var(--font-size-sm); color: var(--primary);">
+                <i class="fas fa-cog"></i>
+                {{ structured.meta.method if structured.meta and structured.meta.method else 'Неизвестно' }}
+            </div>
+            <div style="background: var(--gray-100); padding: var(--space-2) var(--space-3); border-radius: var(--radius); font-size: var(--font-size-sm); color: var(--gray-600);">
+                <i class="fas fa-clock"></i>
+                {{ structured.meta.duration_sec }}с
+            </div>
+        </div>
+        
+        <!-- Legend -->
+        <div style="display: flex; gap: var(--space-3); flex-wrap: wrap; margin-bottom: var(--space-6); font-size: var(--font-size-xs);">
+            <span style="background: var(--info); color: var(--white); padding: var(--space-1) var(--space-2); border-radius: var(--radius-sm);">
+                <i class="fas fa-user"></i> Клиент
+            </span>
+            <span style="background: var(--success); color: var(--white); padding: var(--space-1) var(--space-2); border-radius: var(--radius-sm);">
+                <i class="fas fa-headset"></i> Оператор
+            </span>
+            <span style="background: var(--gray-400); color: var(--white); padding: var(--space-1) var(--space-2); border-radius: var(--radius-sm);">
+                <i class="fas fa-pause"></i> Пауза
+            </span>
+        </div>
+    </div>
+    
+    <!-- Chat Messages -->
+    <div style="background: var(--gray-50); border-radius: var(--radius-lg); padding: var(--space-6); max-height: 600px; overflow-y: auto;">
+        {% for seg in structured.segments %}
+            {% set seg_type = seg.segment_type if 'segment_type' in seg else 'speech' %}
+            {% if seg_type == 'silence' %}
+                <!-- Silence Segment -->
+                <div style="display: flex; justify-content: center; margin: var(--space-4) 0;">
+                    <div style="background: var(--gray-200); color: var(--gray-600); padding: var(--space-2) var(--space-4); border-radius: var(--radius-lg); font-size: var(--font-size-sm); font-style: italic;">
+                        <i class="fas fa-pause"></i>
+                        {{ seg.text }}
+                    </div>
+                </div>
+            {% else %}
+                <!-- Speech Segment -->
+                <div style="display: flex; gap: var(--space-4); margin-bottom: var(--space-6); {% if seg.speaker == 'operator' %}flex-direction: row-reverse;{% endif %}">
+                    <!-- Avatar -->
+                    <div style="flex-shrink: 0;">
+                        {% if seg.speaker == 'client' %}
+                        <div style="background: var(--info); color: var(--white); width: 48px; height: 48px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 600; box-shadow: var(--shadow);">
+                            <i class="fas fa-user"></i>
+                        </div>
+                        {% elif seg.speaker == 'operator' %}
+                        <div style="background: var(--success); color: var(--white); width: 48px; height: 48px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 600; box-shadow: var(--shadow);">
+                            <i class="fas fa-headset"></i>
+                        </div>
+                        {% else %}
+                        <div style="background: var(--gray-500); color: var(--white); width: 48px; height: 48px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 600; box-shadow: var(--shadow);">
+                            <i class="fas fa-question"></i>
+                        </div>
+                        {% endif %}
+                    </div>
+                    
+                    <!-- Message Bubble -->
+                    <div style="flex: 1; max-width: 70%;">
+                        <div style="margin-bottom: var(--space-2); display: flex; align-items: center; gap: var(--space-2); {% if seg.speaker == 'operator' %}justify-content: flex-end;{% endif %}">
+                            <span style="font-weight: 600; color: var(--gray-800); font-size: var(--font-size-sm);">
+                                {% if seg.speaker == 'client' %}Клиент{% elif seg.speaker == 'operator' %}Оператор{% else %}Неизвестно{% endif %}
+                            </span>
+                            <span style="color: var(--gray-500); font-size: var(--font-size-xs);">
+                                {{ seg.start }}–{{ seg.end }}с
+                            </span>
+                        </div>
+                        
+                        <div style="background: {% if seg.speaker == 'operator' %}var(--success){% else %}var(--white){% endif %}; 
+                                    color: {% if seg.speaker == 'operator' %}var(--white){% else %}var(--gray-800){% endif %}; 
+                                    padding: var(--space-4); 
+                                    border-radius: var(--radius-lg); 
+                                    box-shadow: var(--shadow); 
+                                    line-height: 1.6;
+                                    position: relative;">
+                            <div style="margin-bottom: var(--space-2);">
+                                {{ seg.text }}
+                            </div>
+                            
                             {% if seg.words %}
-                                <div style="display:flex; flex-wrap:wrap; gap:4px; margin-top:6px;">
-                                    {% for w in seg.words %}
-                                        <span class="word" data-start="{{ w.start }}" data-end="{{ w.end }}" title="{{ w.start }}–{{ w.end }} c" style="background:#eef2ff;color:#4338ca;padding:3px 6px;border-radius:6px;font-size:0.6rem; cursor:help; transition:background .3s;">{{ w.w }}</span>
-                                    {% endfor %}
-                                </div>
+                            <div style="margin-top: var(--space-3); display: flex; flex-wrap: wrap; gap: var(--space-1);">
+                                {% for w in seg.words %}
+                                <span style="background: {% if seg.speaker == 'operator' %}rgba(255,255,255,0.2){% else %}var(--gray-100){% endif %}; 
+                                             padding: 2px var(--space-1); 
+                                             border-radius: var(--radius-sm); 
+                                             font-size: var(--font-size-xs); 
+                                             cursor: help;"
+                                      title="{{ w.start }}–{{ w.end }}с">
+                                    {{ w.w }}
+                                </span>
+                                {% endfor %}
+                            </div>
                             {% endif %}
                         </div>
                     </div>
                 </div>
-            {% endfor %}
-        </div>
-        <script>
-            // Hover подсветка сегментов
-            document.querySelectorAll('#chat .seg').forEach(seg => {
-                seg.addEventListener('mouseenter', () => {
-                    const bubble = seg.querySelector('.bubble');
-                    if (bubble) bubble.style.boxShadow = '0 0 0 2px #667eea55, 0 4px 14px rgba(0,0,0,0.08)';
-                });
-                seg.addEventListener('mouseleave', () => {
-                    const bubble = seg.querySelector('.bubble');
-                    if (bubble) bubble.style.boxShadow = 'none';
-                });
-            });
-            // Анимация слов при наведении
-            document.querySelectorAll('#chat .word').forEach(w => {
-                w.addEventListener('mouseenter', () => {
-                    w.style.background = '#c7d2fe';
-                });
-                w.addEventListener('mouseleave', () => {
-                    w.style.background = '#eef2ff';
-                });
-            });
-        </script>
-        {% else %}
-            <div style="background: white; padding: 20px; border-radius: 8px; max-height: 500px; overflow-y: auto; line-height: 1.8; color: #2c3e50; white-space: pre-line;">{{ conversation.analysis.transcript }}</div>
-        {% endif %}
+            {% endif %}
+        {% endfor %}
     </div>
-
     {% else %}
-    <!-- НЕТ АНАЛИЗА -->
-    <div style="text-align: center; padding: 60px 20px; color: #7f8c8d;">
-        <p style="font-size: 3rem; margin-bottom: 20px;">⏳</p>
-        <h3 style="color: #2c3e50; margin-bottom: 10px;">Анализ в процессе</h3>
-        <p>Обработка файла может занять некоторое время</p>
+    <!-- Plain Text Transcript -->
+    <div style="background: var(--gray-50); padding: var(--space-6); border-radius: var(--radius-lg); max-height: 500px; overflow-y: auto; line-height: 1.8; color: var(--gray-700); white-space: pre-line;">
+        {{ conversation.analysis.transcript or 'Транскрипция недоступна' }}
     </div>
     {% endif %}
 </div>
+
+{% else %}
+<!-- No Analysis -->
+<div class="card" style="text-align: center; padding: var(--space-12);">
+    <div style="font-size: 4rem; margin-bottom: var(--space-6); color: var(--gray-400);">
+        <i class="fas fa-hourglass-half"></i>
+    </div>
+    <h3 style="color: var(--gray-600); margin-bottom: var(--space-4);">Анализ в процессе</h3>
+    <p style="color: var(--gray-500);">
+        Обработка файла может занять некоторое время.<br>
+        Страница автоматически обновится при завершении.
+    </p>
+    <div style="margin-top: var(--space-6);">
+        <div class="loading-spinner" style="margin: 0 auto;"></div>
+    </div>
+</div>
+
+<script>
+// Auto-refresh for pending analysis
+if ('{{ conversation.status }}' !== 'completed') {
+    setTimeout(() => {
+        window.location.reload();
+    }, 10000); // Refresh every 10 seconds
+}
+</script>
+{% endif %}
+
+<style>
+/* Custom animations for chat */
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.card {
+    animation: fadeInUp 0.5s ease-out;
+}
+
+/* Hover effects for message bubbles */
+.card div[style*="background: var(--success)"],
+.card div[style*="background: var(--white)"] {
+    transition: var(--transition);
+}
+
+.card div[style*="background: var(--success)"]:hover,
+.card div[style*="background: var(--white)"]:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-lg);
+}
+</style>
 {% endblock %}

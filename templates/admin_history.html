@@ -1,83 +1,175 @@
-{% extends "base.html" %}
-{% block title %}История звонков (админ) - OperaMind{% endblock %}
+{% extends 'base.html' %}
+{% block title %}История звонков (Админ) - OperaMind{% endblock %}
 {% block content %}
-<div class="card">
-    <h2 style="color:#2c3e50; margin-bottom:20px;">🛠️ История звонков всех пользователей</h2>
-    <form method="get" style="margin-bottom:18px; display:flex; gap:20px; align-items:center;">
-        <input name="username" type="text" placeholder="Фильтр по имени пользователя..." value="{{ request.args.get('username', '') }}" style="padding:8px 14px; border:1.5px solid #667eea; border-radius:8px; font-size:1rem;">
-        <button type="submit" class="btn btn-secondary">Фильтровать</button>
-    </form>
-    <div style="overflow-x:auto;">
-    <table style="width:100%; border-collapse:collapse;">
-        <thead>
-            <tr style="background: linear-gradient(135deg, #667eea15 0%, #764ba215 100%);">
-                <th style="padding:12px;">ID</th>
-                <th style="padding:12px;">Пользователь</th>
-                <th style="padding:12px;">Файл</th>
-                <th style="padding:12px;">Дата</th>
-                <th style="padding:12px;">Статус</th>
-                <th style="padding:12px;">Анализ</th>
-                <th style="padding:12px;">Срочность</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for conv in conversations %}
-            <tr style="border-bottom:1px solid #f0f0f0;">
-                <td style="padding:12px; color:#7f8c8d;">{{ conv.id }}</td>
-                <td style="padding:12px; color:#2c3e50;">{{ conv.user.username }}</td>
-                <td style="padding:12px;">{{ conv.filename }}</td>
-                <td style="padding:12px;">{{ conv.upload_date.strftime('%d.%m.%Y %H:%M') }}</td>
-                <td style="padding:12px;">
-                    {% if conv.analysis %}
-                    <span style="background: #27ae60; color: white; padding: 6px 14px; border-radius: 20px; font-size: 0.85rem; font-weight: 600;">Проанализирован</span>
-                    {% else %}
-                    <span style="background: #f39c12; color: white; padding: 6px 14px; border-radius: 20px; font-size: 0.85rem; font-weight: 600;">Ожидает</span>
-                    {% endif %}
-                </td>
-                <td style="padding:12px;">
-                    <a href="{{ url_for('conversation_detail', conversation_id=conv.id, admin=1) }}" class="btn btn-secondary" style="font-size:0.9rem;">Анализ</a>
-                </td>
-                <td style="padding:12px;">
-                    {% if conv.analysis %}
-                        {{ conv.analysis.urgency or '-' }}
-                    {% else %}
-                        -
-                    {% endif %}
-                </td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
+
+<!-- Header + Filters -->
+<div class="card" style="animation:fadeInUp .4s ease;">
+    <div class="card-header" style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:var(--space-6);">
+        <div>
+            <h2 class="card-title" style="display:flex;align-items:center;gap:var(--space-3);"><i class="fas fa-database" style="color:var(--primary);"></i> История звонков всех пользователей</h2>
+            <div class="card-subtitle">Полный журнал обработанных и текущих разговоров</div>
+        </div>
+        <form method="get" style="display:flex;gap:var(--space-4);flex-wrap:wrap;align-items:center;">
+            <div style="position:relative;">
+                <i class="fas fa-search" style="position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--gray-400);"></i>
+                <input name="username" value="{{ request.args.get('username','') }}" placeholder="Фильтр по пользователю" style="padding:10px 14px 10px 34px;border:1px solid var(--gray-300);border-radius:var(--radius-md);font-size:var(--font-size-sm);min-width:220px;">
+            </div>
+            <button class="btn btn-outline btn-sm" type="submit"><i class="fas fa-filter"></i> Применить</button>
+            <a class="btn btn-sm" href="{{ url_for('admin.admin_history') }}"><i class="fas fa-undo"></i> Сброс</a>
+        </form>
+    </div>
+
+    <!-- Summary Stats -->
+    {% set total = conversations|length %}
+    {% set completed = conversations|selectattr('status','equalto','completed')|list|length %}
+    {% set errors = conversations|selectattr('status','equalto','error')|list|length %}
+    {% set analyzing = conversations|selectattr('status','equalto','analyzing')|list|length %}
+    {% set transcribing = conversations|selectattr('status','equalto','transcribing')|list|length %}
+    {% set pending = conversations|selectattr('status','equalto','pending')|list|length %}
+    <div class="admin-grid" style="margin-top:0;">
+        <div class="stat-card">
+            <div class="stat-number">{{ total }}</div>
+            <div class="stat-label">Всего</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-number" style="color:var(--success);">{{ completed }}</div>
+            <div class="stat-label">Завершено</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-number" style="color:var(--warning);">{{ analyzing + transcribing + pending }}</div>
+            <div class="stat-label">В работе</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-number" style="color:var(--error);">{{ errors }}</div>
+            <div class="stat-label">Ошибки</div>
+        </div>
+    </div>
+
+    <!-- Mini Charts (Pure CSS) -->
+    {% set day_labels = chart_labels %}
+    {% set day_values = chart_data %}
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:var(--space-6);margin-top:var(--space-6);">
+        <div class="card" style="margin:0;padding:var(--space-6);">
+            <h3 style="font-size:var(--font-size-lg);margin-bottom:var(--space-4);display:flex;align-items:center;gap:var(--space-2);"><i class="fas fa-chart-bar" style="color:var(--primary);"></i> Активность по дням</h3>
+            {% if day_values %}
+            {% set max_v = day_values|max %}
+            <div style="display:flex;align-items:flex-end;gap:6px;height:120px;">
+                                {% for v in day_values %}
+                                    {% set h =  ( (v / (max_v if max_v>0 else 1)) * 100 )  %}
+                                    <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:4px;">
+                                        <div class="mini-bar" data-h="{{ h|round(0) }}" title="{{ v }} звонков"></div>
+                                        <div style="font-size:10px;color:var(--gray-500);white-space:nowrap;">{{ day_labels[loop.index0] }}</div>
+                                    </div>
+                                {% endfor %}
+            </div>
+            {% else %}
+                <div style="color:var(--gray-400);font-size:var(--font-size-sm);">Нет данных</div>
+            {% endif %}
+        </div>
+        <div class="card" style="margin:0;padding:var(--space-6);">
+            <h3 style="font-size:var(--font-size-lg);margin-bottom:var(--space-4);display:flex;align-items:center;gap:var(--space-2);"><i class="fas fa-percentage" style="color:var(--accent);"></i> Статусы</h3>
+            {% set status_counts = {
+                'completed': completed,
+                'error': errors,
+                'working': analyzing + transcribing + pending
+            } %}
+            {% set total_calc = completed + errors + analyzing + transcribing + pending %}
+            <div style="display:flex;flex-direction:column;gap:10px;">
+                                {% for k,v in status_counts.items() %}
+                                    {% set perc = ( (v / (total_calc if total_calc>0 else 1)) * 100 ) %}
+                                    <div style="display:flex;flex-direction:column;gap:4px;">
+                                        <div style="display:flex;justify-content:space-between;font-size:var(--font-size-xs);color:var(--gray-600);">
+                                            <span>{{ k }}</span><span>{{ v }}</span>
+                                        </div>
+                                        <div class="progress-outer">
+                                            <div class="progress-inner status-{{ k }}" data-w="{{ perc|round(1) }}"></div>
+                                        </div>
+                                    </div>
+                                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Conversations Table -->
+    <div class="table-container" style="margin-top:var(--space-8);">
+        <table class="table" id="adminHistoryTable">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Пользователь</th>
+                        <th>Файл</th>
+                    <th>Дата</th>
+                    <th>Статус</th>
+                    <th>Срочность</th>
+                    <th>Действия</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for conv in conversations %}
+                <tr data-user="{{ conv.user.username|lower }}">
+                    <td style="font-size:var(--font-size-xs);color:var(--gray-500);">{{ conv.id }}</td>
+                    <td style="font-weight:600;">{{ conv.user.username }}</td>
+                    <td>{{ conv.filename }}</td>
+                    <td style="font-size:var(--font-size-xs);white-space:nowrap;">{{ conv.upload_date.strftime('%d.%m.%Y %H:%M') }}</td>
+                                <td>
+                                    <span class="status-chip status-{{ conv.status }}">{{ conv.status }}</span>
+                                </td>
+                    <td>
+                        {% if conv.analysis %}
+                            <span class="urgency-chip urgency-{{ conv.analysis.urgency or 'unknown' }}">{{ conv.analysis.urgency_display }}</span>
+                        {% else %}
+                            <span class="urgency-chip urgency-none">—</span>
+                        {% endif %}
+                    </td>
+                    <td style="display:flex;gap:6px;flex-wrap:wrap;">
+                        <a class="btn btn-sm btn-outline" href="{{ url_for('conversation_detail', conversation_id=conv.id) }}" title="Детали"><i class="fas fa-eye"></i></a>
+                        {% if conv.analysis %}
+                        <a class="btn btn-sm btn-secondary" href="{{ url_for('download_report', conversation_id=conv.id) }}" title="Отчёт"><i class="fas fa-download"></i></a>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
     </div>
 </div>
-<div style="margin-top:30px;">
-    <h3 style="color:#2c3e50; margin-bottom:15px;">📊 Общая статистика</h3>
-    <canvas id="adminStatsChart" height="120"></canvas>
-</div>
-<script type="application/json" id="chartLabelsData">{{ chart_labels|tojson|safe }}</script>
-<script type="application/json" id="chartDataData">{{ chart_data|tojson|safe }}</script>
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<style>
+    .mini-bar {width:100%; background:linear-gradient(135deg,var(--primary),var(--secondary)); border-radius:4px; position:relative; transition:height .35s ease;}
+    .status-chip { display:inline-block; padding:4px 10px; border-radius:20px; font-size:var(--font-size-xs); font-weight:600; color:var(--white); }
+    .status-completed { background:var(--success); }
+    .status-error { background:var(--error); }
+    .status-transcribing { background:var(--info); }
+    .status-analyzing { background:var(--warning); }
+    .status-pending { background:var(--gray-400); }
+    .urgency-chip { display:inline-block; padding:4px 10px; border-radius:12px; font-size:var(--font-size-xs); font-weight:600; }
+    .urgency-low { background:var(--success); color:var(--white); }
+    .urgency-medium { background:var(--info); color:var(--white); }
+    .urgency-high { background:var(--warning); color:var(--white); }
+    .urgency-critical { background:var(--error); color:var(--white); }
+    .urgency-none { background:var(--gray-300); color:var(--gray-600); }
+    /* Hover animation rows */
+    #adminHistoryTable tbody tr { transition:var(--transition); }
+    #adminHistoryTable tbody tr:hover { background:var(--gray-50); }
+    .progress-outer {height:8px;background:var(--gray-200);border-radius:4px;overflow:hidden;}
+    .progress-inner {height:100%;transition:width .4s ease;}
+    .progress-inner.status-completed {background:var(--success);}
+    .progress-inner.status-error {background:var(--error);}
+    .progress-inner.status-working {background:var(--warning);}
+</style>
+
 <script>
-const chartLabels = JSON.parse(document.getElementById('chartLabelsData').textContent);
-const chartData = JSON.parse(document.getElementById('chartDataData').textContent);
-const ctx = document.getElementById('adminStatsChart').getContext('2d');
-const adminStatsChart = new Chart(ctx, {
-    type: 'bar',
-    data: {
-        labels: Array.isArray(chartLabels) ? chartLabels : [],
-        datasets: [{
-            label: 'Количество звонков',
-            data: Array.isArray(chartData) ? chartData : [],
-            backgroundColor: '#667eea'
-        }]
-    },
-    options: {
-        responsive: true,
-        plugins: {
-            legend: { display: false },
-            title: { display: false }
-        }
-    }
-});
+    // Применяем проценты высоты и ширины после загрузки DOM
+    document.addEventListener('DOMContentLoaded', () => {
+        document.querySelectorAll('.mini-bar').forEach(el => {
+            const h = el.getAttribute('data-h');
+            if(h) el.style.height = h + '%';
+        });
+        document.querySelectorAll('.progress-inner').forEach(el => {
+            const w = el.getAttribute('data-w');
+            if(w) el.style.width = w + '%';
+        });
+    });
 </script>
+
 {% endblock %}

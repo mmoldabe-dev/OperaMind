@@ -3,176 +3,251 @@
 {% block title %}Загрузка файлов - OperaMind{% endblock %}
 
 {% block content %}
-<div style="max-width: 700px; margin: 0 auto;">
-    <div class="card">
-        <h2 style="margin-bottom: 10px; color: #2c3e50;">📤 Загрузка файла для анализа</h2>
-        <p style="color: #7f8c8d; margin-bottom: 30px;">
-            Загрузите аудиофайл или готовую транскрипцию
-        </p>
+<div style="max-width: 800px; margin: 0 auto;">
+    <!-- Hero Section -->
+    <div class="card" style="text-align: center; margin-bottom: var(--space-8);">
+        <div class="card-header">
+            <h1 class="card-title">
+                <i class="fas fa-microphone-alt" style="color: var(--primary);"></i>
+                Анализ разговоров
+            </h1>
+            <p class="card-subtitle">
+                Загрузите аудиофайл или готовую транскрипцию для автоматического анализа
+            </p>
+        </div>
         
-    <form id="uploadForm" method="POST" action="{{ url_for('upload_file') }}" enctype="multipart/form-data">
-            <div style="margin-bottom: 25px;">
-                <label style="display: block; margin-bottom: 12px; font-weight: 600; color: #2c3e50;">
-                    📁 Выберите файл
+        <!-- Upload Form -->
+        <form id="uploadForm" method="POST" action="{{ url_for('upload_file') }}" enctype="multipart/form-data">
+            <div style="margin-bottom: var(--space-6);">
+                <label style="display: block; margin-bottom: var(--space-4); font-weight: 600; color: var(--gray-700); text-align: left;">
+                    <i class="fas fa-file-upload"></i>
+                    Выберите файл
                 </label>
-                <div style="position: relative;">
+                <div class="file-upload-area" style="position: relative; border: 3px dashed var(--primary); border-radius: var(--radius-lg); padding: var(--space-10); background: linear-gradient(135deg, var(--primary-light) 0%, rgba(118, 75, 162, 0.05) 100%); transition: var(--transition); cursor: pointer;">
                     <input type="file" name="file" accept=".mp3,.wav,.m4a,.ogg,.txt" required
-                           style="width: 100%; padding: 20px; border: 3px dashed #667eea; border-radius: 12px; background: #f8f9ff; cursor: pointer; font-size: 1rem;"
-                           onchange="this.nextElementSibling.textContent = this.files[0]?.name || 'Файл не выбран'">
-                    <p style="margin-top: 10px; color: #667eea; font-weight: 500;">Файл не выбран</p>
+                           style="position: absolute; inset: 0; opacity: 0; cursor: pointer;"
+                           onchange="updateFileDisplay(this)">
+                    <div class="file-upload-content">
+                        <i class="fas fa-cloud-upload-alt" style="font-size: 3rem; color: var(--primary); margin-bottom: var(--space-4);"></i>
+                        <p style="font-size: var(--font-size-lg); font-weight: 600; color: var(--gray-700); margin-bottom: var(--space-2);">
+                            Перетащите файл сюда или нажмите для выбора
+                        </p>
+                        <p id="fileName" style="color: var(--primary); font-weight: 500;">
+                            Файл не выбран
+                        </p>
+                    </div>
                 </div>
             </div>
             
-            <div style="background: linear-gradient(135deg, #667eea15 0%, #764ba215 100%); padding: 20px; border-radius: 10px; margin-bottom: 25px;">
-                <p style="color: #2c3e50; margin-bottom: 10px;"><strong>🎵 Аудиофайлы:</strong></p>
-                <p style="color: #7f8c8d; margin-bottom: 15px;">MP3, WAV, M4A, OGG (до 50 МБ)</p>
-                <p style="color: #2c3e50; margin-bottom: 10px;"><strong>📄 Текстовые файлы:</strong></p>
-                <p style="color: #7f8c8d;">TXT с готовой транскрипцией</p>
+            <!-- File Types Info -->
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-4); margin-bottom: var(--space-8);">
+                <div style="background: linear-gradient(135deg, var(--success) 10%, transparent 100%); padding: var(--space-4); border-radius: var(--radius-md); border-left: 4px solid var(--success);">
+                    <div style="display: flex; align-items: center; gap: var(--space-2); margin-bottom: var(--space-2);">
+                        <i class="fas fa-music" style="color: var(--success);"></i>
+                        <strong style="color: var(--gray-800);">Аудиофайлы</strong>
+                    </div>
+                    <p style="color: var(--gray-600); font-size: var(--font-size-sm);">
+                        MP3, WAV, M4A, OGG<br>
+                        <small>до 50 МБ</small>
+                    </p>
+                </div>
+                
+                <div style="background: linear-gradient(135deg, var(--info) 10%, transparent 100%); padding: var(--space-4); border-radius: var(--radius-md); border-left: 4px solid var(--info);">
+                    <div style="display: flex; align-items: center; gap: var(--space-2); margin-bottom: var(--space-2);">
+                        <i class="fas fa-file-alt" style="color: var(--info);"></i>
+                        <strong style="color: var(--gray-800);">Текстовые файлы</strong>
+                    </div>
+                    <p style="color: var(--gray-600); font-size: var(--font-size-sm);">
+                        TXT файлы<br>
+                        <small>готовая транскрипция</small>
+                    </p>
+                </div>
             </div>
             
-            <button id="submitBtn" type="submit" class="btn" style="width: 100%; padding: 16px; font-size: 1.1rem;">
-                🚀 Загрузить и обработать
-            </button>
+            <div style="display: flex; gap: var(--space-4); justify-content: center;">
+                <button id="submitBtn" type="submit" class="btn btn-lg" style="min-width: 200px;">
+                    <i class="fas fa-rocket"></i>
+                    Обработать файл
+                </button>
+                
+                <a href="{{ url_for('history') }}" class="btn btn-outline btn-lg">
+                    <i class="fas fa-history"></i>
+                    История
+                </a>
+            </div>
         </form>
     </div>
     
-    <div style="margin-top: 30px; text-align: center;">
-        <a href="{{ url_for('history') }}" class="btn btn-secondary" style="padding: 14px 30px;">
-            📋 История загрузок
-        </a>
+    <!-- Process Steps -->
+    <div class="card">
+        <div class="card-header">
+            <h3 class="card-title" style="font-size: var(--font-size-xl);">
+                <i class="fas fa-cogs"></i>
+                Процесс обработки
+            </h3>
+        </div>
+        
+        <div style="display: grid; gap: var(--space-6);">
+            <div style="display: flex; gap: var(--space-4); align-items: start;">
+                <div style="background: linear-gradient(135deg, var(--primary), var(--secondary)); color: var(--white); width: 48px; height: 48px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; flex-shrink: 0; box-shadow: var(--shadow);">1</div>
+                <div>
+                    <h4 style="color: var(--gray-800); font-size: var(--font-size-lg); margin-bottom: var(--space-2);">
+                        <i class="fas fa-upload" style="color: var(--primary);"></i>
+                        Загрузка файла
+                    </h4>
+                    <p style="color: var(--gray-600);">Аудио или текстовый файл безопасно сохраняется в системе</p>
+                </div>
+            </div>
+            
+            <div style="display: flex; gap: var(--space-4); align-items: start;">
+                <div style="background: linear-gradient(135deg, var(--primary), var(--secondary)); color: var(--white); width: 48px; height: 48px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; flex-shrink: 0; box-shadow: var(--shadow);">2</div>
+                <div>
+                    <h4 style="color: var(--gray-800); font-size: var(--font-size-lg); margin-bottom: var(--space-2);">
+                        <i class="fas fa-microphone" style="color: var(--accent);"></i>
+                        Транскрипция
+                    </h4>
+                    <p style="color: var(--gray-600);">Аудио преобразуется в текст с помощью продвинутых алгоритмов распознавания речи</p>
+                </div>
+            </div>
+            
+            <div style="display: flex; gap: var(--space-4); align-items: start;">
+                <div style="background: linear-gradient(135deg, var(--primary), var(--secondary)); color: var(--white); width: 48px; height: 48px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; flex-shrink: 0; box-shadow: var(--shadow);">3</div>
+                <div>
+                    <h4 style="color: var(--gray-800); font-size: var(--font-size-lg); margin-bottom: var(--space-2);">
+                        <i class="fas fa-brain" style="color: var(--warning);"></i>
+                        ИИ-анализ
+                    </h4>
+                    <p style="color: var(--gray-600);">Gemini AI анализирует содержание: тема, тональность, ключевые моменты</p>
+                </div>
+            </div>
+            
+            <div style="display: flex; gap: var(--space-4); align-items: start;">
+                <div style="background: linear-gradient(135deg, var(--primary), var(--secondary)); color: var(--white); width: 48px; height: 48px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; flex-shrink: 0; box-shadow: var(--shadow);">4</div>
+                <div>
+                    <h4 style="color: var(--gray-800); font-size: var(--font-size-lg); margin-bottom: var(--space-2);">
+                        <i class="fas fa-chart-line" style="color: var(--success);"></i>
+                        Формирование отчёта
+                    </h4>
+                    <p style="color: var(--gray-600);">Создание детального анализа с рекомендациями для улучшения работы</p>
+                </div>
+            </div>
+        </div>
     </div>
 </div>
 
-<div id="progressOverlay" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.55); backdrop-filter:blur(4px); z-index:999; align-items:center; justify-content:center;">
-    <div style="background:white; padding:40px 50px; border-radius:18px; width:420px; box-shadow:0 10px 40px rgba(0,0,0,0.25); text-align:center;">
-        <h2 style="margin-bottom:18px; font-size:1.4rem; color:#2c3e50;">⏳ Обработка файла</h2>
-        <p id="phaseText" style="color:#555; margin-bottom:25px;">Загрузка...</p>
-        <div style="height:10px; background:#eef2ff; border-radius:6px; overflow:hidden; margin-bottom:25px;">
-            <div id="bar" style="height:100%; width:10%; background:linear-gradient(90deg,#667eea,#764ba2); transition:width .6s ease;"> </div>
+<!-- Progress Overlay -->
+<div id="progressOverlay" style="display: none; position: fixed; inset: 0; background: rgba(0, 0, 0, 0.6); backdrop-filter: blur(8px); z-index: 1000; align-items: center; justify-content: center;">
+    <div style="background: var(--white); padding: var(--space-10); border-radius: var(--radius-xl); width: 480px; box-shadow: var(--shadow-xl); text-align: center;">
+        <h2 style="margin-bottom: var(--space-4); font-size: var(--font-size-2xl); color: var(--gray-900);">
+            <i class="fas fa-spinner fa-spin" style="color: var(--primary);"></i>
+            Обработка файла
+        </h2>
+        <p id="phaseText" style="color: var(--gray-600); margin-bottom: var(--space-6); font-size: var(--font-size-lg);">
+            Загрузка файла...
+        </p>
+        
+        <div class="progress-bar" style="margin-bottom: var(--space-6);">
+            <div id="progressFill" class="progress-fill" style="width: 10%;"></div>
         </div>
-        <p style="font-size:0.75rem; color:#7f8c8d;">Не закрывайте страницу до завершения.</p>
+        
+        <p style="font-size: var(--font-size-sm); color: var(--gray-500);">
+            <i class="fas fa-info-circle"></i>
+            Не закрывайте страницу до завершения обработки
+        </p>
     </div>
 </div>
 
 <script>
+    // File upload interactions
+    function updateFileDisplay(input) {
+        const fileName = document.getElementById('fileName');
+        const uploadArea = document.querySelector('.file-upload-area');
+        
+        if (input.files && input.files[0]) {
+            fileName.textContent = input.files[0].name;
+            fileName.style.color = 'var(--success)';
+            uploadArea.style.borderColor = 'var(--success)';
+            uploadArea.style.background = 'linear-gradient(135deg, rgba(16, 185, 129, 0.1) 0%, rgba(16, 185, 129, 0.05) 100%)';
+        } else {
+            fileName.textContent = 'Файл не выбран';
+            fileName.style.color = 'var(--primary)';
+            uploadArea.style.borderColor = 'var(--primary)';
+            uploadArea.style.background = 'linear-gradient(135deg, var(--primary-light) 0%, rgba(118, 75, 162, 0.05) 100%)';
+        }
+    }
+    
+    // Drag and drop functionality
+    const uploadArea = document.querySelector('.file-upload-area');
+    const fileInput = document.querySelector('input[type="file"]');
+    
+    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+        uploadArea.addEventListener(eventName, preventDefaults, false);
+        document.body.addEventListener(eventName, preventDefaults, false);
+    });
+    
+    ['dragenter', 'dragover'].forEach(eventName => {
+        uploadArea.addEventListener(eventName, highlight, false);
+    });
+    
+    ['dragleave', 'drop'].forEach(eventName => {
+        uploadArea.addEventListener(eventName, unhighlight, false);
+    });
+    
+    uploadArea.addEventListener('drop', handleDrop, false);
+    
+    function preventDefaults(e) {
+        e.preventDefault();
+        e.stopPropagation();
+    }
+    
+    function highlight(e) {
+        uploadArea.style.borderColor = 'var(--success)';
+        uploadArea.style.background = 'linear-gradient(135deg, rgba(16, 185, 129, 0.15) 0%, rgba(16, 185, 129, 0.1) 100%)';
+    }
+    
+    function unhighlight(e) {
+        uploadArea.style.borderColor = 'var(--primary)';
+        uploadArea.style.background = 'linear-gradient(135deg, var(--primary-light) 0%, rgba(118, 75, 162, 0.05) 100%)';
+    }
+    
+    function handleDrop(e) {
+        const dt = e.dataTransfer;
+        const files = dt.files;
+        
+        fileInput.files = files;
+        updateFileDisplay(fileInput);
+    }
+    
+    // Form submission with progress
     const form = document.getElementById('uploadForm');
     const overlay = document.getElementById('progressOverlay');
-    const bar = document.getElementById('bar');
-    const phase = document.getElementById('phaseText');
+    const progressFill = document.getElementById('progressFill');
+    const phaseText = document.getElementById('phaseText');
     const submitBtn = document.getElementById('submitBtn');
+    
     if (form) {
         form.addEventListener('submit', () => {
             overlay.style.display = 'flex';
             submitBtn.disabled = true;
-            let p = 5;
-            phase.textContent = 'Загрузка файла...';
-            bar.style.width = p + '%';
-            const steps = [
-                {t:1500, phase:'Транскрипция...', w:40},
-                {t:4000, phase:'Анализ разговора...', w:70},
-                {t:7000, phase:'Формирование результата...', w:90},
+            
+            let progress = 10;
+            phaseText.textContent = 'Загрузка файла...';
+            progressFill.style.width = progress + '%';
+            
+            const phases = [
+                { delay: 1500, text: 'Транскрипция аудио...', progress: 35 },
+                { delay: 4000, text: 'ИИ-анализ содержания...', progress: 65 },
+                { delay: 7000, text: 'Формирование отчёта...', progress: 85 },
+                { delay: 9000, text: 'Завершение обработки...', progress: 95 }
             ];
-            steps.forEach(s => setTimeout(()=>{ phase.textContent = s.phase; bar.style.width = s.w + '%'; }, s.t));
+            
+            phases.forEach(phase => {
+                setTimeout(() => {
+                    phaseText.textContent = phase.text;
+                    progressFill.style.width = phase.progress + '%';
+                }, phase.delay);
+            });
         });
     }
-</script>
-
-<div style="margin-top: 50px; max-width: 700px; margin-left: auto; margin-right: auto;">
-    <div class="card">
-        <h3 style="margin-bottom: 20px; color: #2c3e50;">🔄 Процесс обработки</h3>
-        <div style="display: grid; gap: 20px;">
-            <div style="display: flex; gap: 15px; align-items: start;">
-                <div style="background: #667eea; color: white; width: 35px; height: 35px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; flex-shrink: 0;">1</div>
-                <div>
-                    <strong style="color: #2c3e50;">Загрузка файла</strong>
-                    <p style="color: #7f8c8d; margin-top: 5px;">Аудио или текстовый файл сохраняется в системе</p>
-                </div>
-            </div>
-            
-            <div style="display: flex; gap: 15px; align-items: start;">
-                <div style="background: #667eea; color: white; width: 35px; height: 35px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; flex-shrink: 0;">2</div>
-                <div>
-                    <strong style="color: #2c3e50;">Транскрипция</strong>
-                    <p style="color: #7f8c8d; margin-top: 5px;">Аудио распознаётся в текст через Gemini AI</p>
-                </div>
-            </div>
-            
-            <div style="display: flex; gap: 15px; align-items: start;">
-                <div style="background: #667eea; color: white; width: 35px; height: 35px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; flex-shrink: 0;">3</div>
-                <div>
-                    <strong style="color: #2c3e50;">Анализ текста</strong>
-                    <p style="color: #7f8c8d; margin-top: 5px;">Gemini анализирует разговор: тема, тональность, качество, рекомендации</p>
-                </div>
-            </div>
-
-            <div style="display: flex; gap: 15px; align-items: start;">
-                <div style="background: #667eea; color: white; width: 35px; height: 35px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; flex-shrink: 0;">4</div>
-                <div>
-                    <strong style="color: #2c3e50;">Результаты и отчёт</strong>
-                    <p style="color: #7f8c8d; margin-top: 5px;">Просмотр полного анализа и скачивание отчёта</p>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Блок статистики -->
-<div style="max-width: 900px; margin: 40px auto 0 auto;">
-    <div class="card" style="padding: 30px 30px 20px 30px;">
-        <h3 style="margin-bottom: 20px; color: #2c3e50;">📊 Статистика звонков</h3>
-        <div style="display: flex; flex-wrap: wrap; gap: 30px;">
-            <div style="flex:1 1 300px; min-width: 300px;">
-                <canvas id="callsByDayChart" height="120"></canvas>
-            </div>
-            <div style="flex:1 1 300px; min-width: 300px;">
-                <canvas id="sentimentPieChart" height="120"></canvas>
-            </div>
-        </div>
-        <div style="margin-top: 30px;">
-            <b>Всего звонков:</b> <span id="totalCalls">...</span> &nbsp;|&nbsp;
-            <b>Средняя длительность:</b> <span id="avgDuration">...</span> сек
-        </div>
-    </div>
-</div>
-
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<script>
-async function loadStats() {
-    try {
-        const resp = await fetch('/api/stats/summary');
-        if (!resp.ok) return;
-        const data = await resp.json();
-        // Calls by day
-        const ctx1 = document.getElementById('callsByDayChart').getContext('2d');
-        new Chart(ctx1, {
-            type: 'bar',
-            data: {
-                labels: Object.keys(data.calls_by_day),
-                datasets: [{
-                    label: 'Звонки по дням',
-                    data: Object.values(data.calls_by_day),
-                    backgroundColor: '#667eea',
-                }]
-            },
-            options: {scales: {y: {beginAtZero: true}}}
-        });
-        // Sentiment pie
-        const ctx2 = document.getElementById('sentimentPieChart').getContext('2d');
-        new Chart(ctx2, {
-            type: 'pie',
-            data: {
-                labels: Object.keys(data.sentiments),
-                datasets: [{
-                    data: Object.values(data.sentiments),
-                    backgroundColor: ['#4fd1c5','#f6ad55','#fc8181','#a0aec0'],
-                }]
-            }
-        });
-        // Totals
-        document.getElementById('totalCalls').textContent = data.total_calls;
-        document.getElementById('avgDuration').textContent = data.avg_duration_sec;
-    } catch(e) {}
-}
-window.addEventListener('DOMContentLoaded', loadStats);
 </script>
 {% endblock %}
