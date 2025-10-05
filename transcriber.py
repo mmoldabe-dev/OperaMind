@@ -5,6 +5,7 @@ import re
 import speech_recognition as sr
 from pydub import AudioSegment
 from pathlib import Path
+import concurrent.futures
 
 # Опционально Whisper (faster-whisper)
 _WHISPER_AVAILABLE = False
@@ -350,6 +351,38 @@ def transcribe_audio_file(filepath: str):
         words_master = []  # [{'w':text,'start':s,'end':e}]
         raw_segments = []  # предварительные распознанные куски
 
+        def recognize_chunk(idx_chunk, ms_start, ms_end, start_pos, end_pos):
+            piece = audio_proc[ms_start:ms_end]
+            piece_wav = f"temp_chunk_{idx_chunk}.wav"
+            piece.export(piece_wav, format='wav')
+            local_recognizer = sr.Recognizer()
+            with sr.AudioFile(piece_wav) as source:
+                local_recognizer.adjust_for_ambient_noise(source, duration=0.1)
+                local_recognizer.energy_threshold = 300
+                local_recognizer.dynamic_energy_threshold = False
+                local_recognizer.pause_threshold = 0.3
+                audio_data = local_recognizer.record(source)
+                try:
+                    chunk_text = local_recognizer.recognize_google(audio_data, language='ru-RU', show_all=False)
+                except sr.RequestError:
+                    try:
+                        local_recognizer.energy_threshold = 500
+                        local_recognizer.pause_threshold = 0.8
+                        chunk_text = local_recognizer.recognize_google(audio_data, language='ru-RU')
+                    except Exception:
+                        chunk_text = ''
+                except sr.UnknownValueError:
+                    chunk_text = '[неразборчиво]'
+                except Exception:
+                    chunk_text = ''
+            os.remove(piece_wav)
+            return {
+                'idx': idx_chunk,
+                'start': start_pos,
+                'end': end_pos,
+                'text': chunk_text.strip()
+            }
+
         if enable_chunked and total_duration > chunk_seconds:
             print(f"🔁 Chunked Google SR: total={total_duration:.1f}s chunk={chunk_seconds}s overlap={chunk_overlap}s")
             step = chunk_seconds - chunk_overlap
@@ -360,46 +393,12 @@ def transcribe_audio_file(filepath: str):
             idx_chunk = 0
             max_iter = int(math.ceil(total_duration / step) + 5)
             iter_count = 0
+            chunk_jobs = []
             while start_pos < total_duration and iter_count < max_iter:
                 end_pos = min(start_pos + chunk_seconds, total_duration)
                 ms_start = int(start_pos * 1000)
                 ms_end = int(end_pos * 1000)
-                piece = audio_proc[ms_start:ms_end]
-                piece_wav = f"temp_chunk_{idx_chunk}.wav"
-                piece.export(piece_wav, format='wav')
-                with sr.AudioFile(piece_wav) as source:
-                    # Более агрессивная настройка для сохранения слов
-                    recognizer.adjust_for_ambient_noise(source, duration=0.1)
-                    recognizer.energy_threshold = 300  # Ниже порог активации
-                    recognizer.dynamic_energy_threshold = False  # Отключить адаптивный порог
-                    recognizer.pause_threshold = 0.3  # Короче паузы между словами
-                    audio_data = recognizer.record(source)
-                    try:
-                        chunk_text = recognizer.recognize_google(audio_data, language='ru-RU', show_all=False)
-                    except sr.RequestError as re:
-                        # Сетевая ошибка - повторная попытка с менее агрессивными настройками
-                        print(f"⚠️ Сетевая ошибка chunk {idx_chunk}, повторная попытка...")
-                        try:
-                            recognizer.energy_threshold = 500
-                            recognizer.pause_threshold = 0.8
-                            chunk_text = recognizer.recognize_google(audio_data, language='ru-RU')
-                        except Exception:
-                            chunk_text = ''
-                    except sr.UnknownValueError:
-                        # Не удалось распознать - сохраняем как тишину 
-                        chunk_text = '[неразборчиво]'
-                        print(f"🔇 Chunk {idx_chunk}: неразборчивый сегмент")
-                    except Exception as ce:
-                        chunk_text = ''
-                        print(f"⚠️ Chunk {idx_chunk} не распознан: {ce}")
-                os.remove(piece_wav)
-                chunk_text = chunk_text.strip()
-                if chunk_text:
-                    raw_segments.append({
-                        'start': start_pos,
-                        'end': end_pos,
-                        'text': chunk_text
-                    })
+                chunk_jobs.append((idx_chunk, ms_start, ms_end, start_pos, end_pos))
                 if end_pos >= total_duration:
                     break
                 start_pos += step
@@ -407,6 +406,18 @@ def transcribe_audio_file(filepath: str):
                 iter_count += 1
             if iter_count >= max_iter:
                 print("⚠️ Достигнут предохранительный лимит итераций chunked цикла — возможна аномалия параметров.")
+            # Параллельная обработка чанков
+            results = []
+            with concurrent.futures.ThreadPoolExecutor(max_workers=min(8, len(chunk_jobs))) as executor:
+                future_to_idx = {executor.submit(recognize_chunk, *job): job[0] for job in chunk_jobs}
+                for future in concurrent.futures.as_completed(future_to_idx):
+                    res = future.result()
+                    results.append(res)
+            # Собрать в исходном порядке
+            results.sort(key=lambda x: x['idx'])
+            for res in results:
+                if res['text']:
+                    raw_segments.append({'start': res['start'], 'end': res['end'], 'text': res['text']})
         else:
             with sr.AudioFile(temp_wav) as source:
                 # Более агрессивная настройка для сохранения слов
