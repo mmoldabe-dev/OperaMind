@@ -181,9 +181,22 @@
             {% if current_user.is_authenticated %}
             <nav>
                 <a href="{{ url_for('index') }}">📤 Загрузить</a>
+                {% if not current_user.is_admin %}
                 <a href="{{ url_for('history') }}">📋 История</a>
+                {% endif %}
+                {% if current_user.is_admin %}
+                <a href="{{ url_for('admin.admin_users') }}">🛠️ Админка</a>
+                <a href="{{ url_for('admin.admin_history') }}">📊 История звонков (админ)</a>
+                {% endif %}
                 <a href="{{ url_for('logout') }}">🚪 Выход</a>
-                <span class="user-badge">{{ current_user.username }}</span>
+                <span class="user-badge">
+                    {{ current_user.username }}
+                    {% if current_user.is_admin %}
+                        (админ)
+                    {% else %}
+                        (работник)
+                    {% endif %}
+                </span>
             </nav>
             {% endif %}
         </div>

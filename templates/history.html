@@ -52,6 +52,7 @@
                         {% endif %}
                     </td>
                     <td style="padding: 15px;">
+                        <a href="{{ url_for('conversation_detail', conversation_id=conv.id) }}" class="btn btn-secondary" style="font-size:0.9rem; margin-bottom:4px;">Анализ</a>
                         <form method="POST" action="{{ url_for('delete_conversation', conversation_id=conv.id) }}" 
                               style="display: inline;"
                               onsubmit="return confirm('Вы уверены, что хотите удалить этот разговор?');">
@@ -88,4 +89,88 @@
     </div>
     {% endif %}
 </div>
+
+<!-- Блок расширенной статистики пользователя -->
+<div style="max-width: 900px; margin: 40px auto 0 auto;">
+    <div class="card" style="padding: 30px 30px 20px 30px;">
+        <h3 style="margin-bottom: 20px; color: #2c3e50;">📈 Ваша статистика</h3>
+        <div style="display: flex; flex-wrap: wrap; gap: 30px;">
+            <div style="flex:1 1 300px; min-width: 300px;">
+                <canvas id="userCallsByDayChart" height="120"></canvas>
+            </div>
+            <div style="flex:1 1 300px; min-width: 300px;">
+                <canvas id="userSentimentPieChart" height="120"></canvas>
+            </div>
+            <div style="flex:1 1 300px; min-width: 300px;">
+                <canvas id="userCategoryPieChart" height="120"></canvas>
+            </div>
+        </div>
+        <div style="margin-top: 30px;">
+            <b>Всего звонков:</b> <span id="userTotalCalls">...</span> &nbsp;|&nbsp;
+            <b>Средняя длительность:</b> <span id="userAvgDuration">...</span> сек &nbsp;|&nbsp;
+            <b>Оценка оператора:</b> <span id="userOpQuality">...</span>
+        </div>
+        <div style="margin-top: 18px;">
+            <b>ТОП-5 ключевых слов:</b> <span id="userTopKeywords">...</span>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+async function loadUserStats() {
+    try {
+        const resp = await fetch('/api/stats/user/{{ current_user.id }}');
+        if (!resp.ok) return;
+        const data = await resp.json();
+        // Calls by day
+        const ctx1 = document.getElementById('userCallsByDayChart').getContext('2d');
+        new Chart(ctx1, {
+            type: 'bar',
+            data: {
+                labels: Object.keys(data.calls_by_day),
+                datasets: [{
+                    label: 'Звонки по дням',
+                    data: Object.values(data.calls_by_day),
+                    backgroundColor: '#667eea',
+                }]
+            },
+            options: {scales: {y: {beginAtZero: true}}}
+        });
+        // Sentiment pie
+        const ctx2 = document.getElementById('userSentimentPieChart').getContext('2d');
+        new Chart(ctx2, {
+            type: 'pie',
+            data: {
+                labels: Object.keys(data.sentiments),
+                datasets: [{
+                    data: Object.values(data.sentiments),
+                    backgroundColor: ['#4fd1c5','#f6ad55','#fc8181','#a0aec0'],
+                }]
+            }
+        });
+        // Category pie
+        const ctx3 = document.getElementById('userCategoryPieChart').getContext('2d');
+        new Chart(ctx3, {
+            type: 'pie',
+            data: {
+                labels: Object.keys(data.categories),
+                datasets: [{
+                    data: Object.values(data.categories),
+                    backgroundColor: ['#667eea','#764ba2','#f6ad55','#fc8181','#a0aec0'],
+                }]
+            }
+        });
+        // Totals
+        document.getElementById('userTotalCalls').textContent = data.total_calls;
+        document.getElementById('userAvgDuration').textContent = data.avg_duration_sec;
+        // Operator quality
+        let opq = Object.entries(data.operator_quality).map(([k,v])=>`${k}: ${v}`).join(', ');
+        document.getElementById('userOpQuality').textContent = opq || 'нет данных';
+        // Top keywords
+        document.getElementById('userTopKeywords').textContent = data.top_keywords.join(', ');
+    } catch(e) {}
+}
+window.addEventListener('DOMContentLoaded', loadUserStats);
+</script>
 {% endblock %}

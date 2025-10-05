@@ -33,6 +33,19 @@ def init_database():
             print('ℹ️  База данных уже существует')
             print('ℹ️  Логин: operator / Пароль: demo123')
         
+        # Создание администратора
+        existing_admin = User.query.filter_by(username='admin').first()
+        if not existing_admin:
+            admin_user = User(username='admin', is_admin=True)
+            admin_user.set_password('admin123')
+            db.session.add(admin_user)
+            db.session.commit()
+            print('✅ Администратор создан:')
+            print('   📧 Логин: admin')
+            print('   🔑 Пароль: admin123')
+        else:
+            print('ℹ️  Админ уже существует: admin / admin123')
+        
         print('\n📋 НОВЫЕ ВОЗМОЖНОСТИ:')
         print('  • Раздельная транскрипция и анализ')
         print('  • Поддержка TXT файлов')

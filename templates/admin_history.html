@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+{% block title %}История звонков (админ) - OperaMind{% endblock %}
+{% block content %}
+<div class="card">
+    <h2 style="color:#2c3e50; margin-bottom:20px;">🛠️ История звонков всех пользователей</h2>
+    <form method="get" style="margin-bottom:18px; display:flex; gap:20px; align-items:center;">
+        <input name="username" type="text" placeholder="Фильтр по имени пользователя..." value="{{ request.args.get('username', '') }}" style="padding:8px 14px; border:1.5px solid #667eea; border-radius:8px; font-size:1rem;">
+        <button type="submit" class="btn btn-secondary">Фильтровать</button>
+    </form>
+    <div style="overflow-x:auto;">
+    <table style="width:100%; border-collapse:collapse;">
+        <thead>
+            <tr style="background: linear-gradient(135deg, #667eea15 0%, #764ba215 100%);">
+                <th style="padding:12px;">ID</th>
+                <th style="padding:12px;">Пользователь</th>
+                <th style="padding:12px;">Файл</th>
+                <th style="padding:12px;">Дата</th>
+                <th style="padding:12px;">Статус</th>
+                <th style="padding:12px;">Анализ</th>
+                <th style="padding:12px;">Срочность</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for conv in conversations %}
+            <tr style="border-bottom:1px solid #f0f0f0;">
+                <td style="padding:12px; color:#7f8c8d;">{{ conv.id }}</td>
+                <td style="padding:12px; color:#2c3e50;">{{ conv.user.username }}</td>
+                <td style="padding:12px;">{{ conv.filename }}</td>
+                <td style="padding:12px;">{{ conv.upload_date.strftime('%d.%m.%Y %H:%M') }}</td>
+                <td style="padding:12px;">
+                    {% if conv.analysis %}
+                    <span style="background: #27ae60; color: white; padding: 6px 14px; border-radius: 20px; font-size: 0.85rem; font-weight: 600;">Проанализирован</span>
+                    {% else %}
+                    <span style="background: #f39c12; color: white; padding: 6px 14px; border-radius: 20px; font-size: 0.85rem; font-weight: 600;">Ожидает</span>
+                    {% endif %}
+                </td>
+                <td style="padding:12px;">
+                    <a href="{{ url_for('conversation_detail', conversation_id=conv.id, admin=1) }}" class="btn btn-secondary" style="font-size:0.9rem;">Анализ</a>
+                </td>
+                <td style="padding:12px;">
+                    {% if conv.analysis %}
+                        {{ conv.analysis.urgency or '-' }}
+                    {% else %}
+                        -
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    </div>
+</div>
+<div style="margin-top:30px;">
+    <h3 style="color:#2c3e50; margin-bottom:15px;">📊 Общая статистика</h3>
+    <canvas id="adminStatsChart" height="120"></canvas>
+</div>
+<script type="application/json" id="chartLabelsData">{{ chart_labels|tojson|safe }}</script>
+<script type="application/json" id="chartDataData">{{ chart_data|tojson|safe }}</script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+const chartLabels = JSON.parse(document.getElementById('chartLabelsData').textContent);
+const chartData = JSON.parse(document.getElementById('chartDataData').textContent);
+const ctx = document.getElementById('adminStatsChart').getContext('2d');
+const adminStatsChart = new Chart(ctx, {
+    type: 'bar',
+    data: {
+        labels: Array.isArray(chartLabels) ? chartLabels : [],
+        datasets: [{
+            label: 'Количество звонков',
+            data: Array.isArray(chartData) ? chartData : [],
+            backgroundColor: '#667eea'
+        }]
+    },
+    options: {
+        responsive: true,
+        plugins: {
+            legend: { display: false },
+            title: { display: false }
+        }
+    }
+});
+</script>
+{% endblock %}

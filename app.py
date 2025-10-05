@@ -15,6 +15,9 @@ from io import BytesIO
 from models import db, User, Conversation, Analysis
 from transcriber import transcribe_audio_file, transcribe_from_text
 from analyzer import analyze_transcript
+from stats import stats_bp
+from stats_user import stats_user_bp
+from admin import admin_bp
 
 load_dotenv()
 
@@ -205,11 +208,10 @@ def history():
 @login_required
 def conversation_detail(conversation_id):
     conversation = Conversation.query.get_or_404(conversation_id)
-    
-    if conversation.user_id != current_user.id:
+    # Доступ: владелец или админ
+    if conversation.user_id != current_user.id and not getattr(current_user, 'is_admin', False):
         flash('❌ Нет доступа', 'error')
         return redirect(url_for('history'))
-    
     return render_template('conversation_detail.html', conversation=conversation)
 
 @app.route('/download/<int:conversation_id>')
@@ -327,6 +329,10 @@ def delete_conversation(conversation_id):
     
     flash('🗑️ Разговор удалён', 'success')
     return redirect(url_for('history'))
+
+app.register_blueprint(stats_bp)
+app.register_blueprint(stats_user_bp)
+app.register_blueprint(admin_bp)
 
 if __name__ == '__main__':
     app.run(debug=True)

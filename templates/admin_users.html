@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% block title %}Пользователи - Админка{% endblock %}
+{% block content %}
+<div class="card">
+    <h2 style="color:#2c3e50; margin-bottom:20px;">🛠️ Админ-панель: пользователи</h2>
+    <div style="margin-bottom:18px; display:flex; gap:20px; align-items:center;">
+        <input id="userFilter" type="text" placeholder="Фильтр по имени..." style="padding:8px 14px; border:1.5px solid #667eea; border-radius:8px; font-size:1rem;">
+        <span style="color:#7f8c8d;">Всего: <b id="userCount">{{ users|length }}</b></span>
+    </div>
+    <div style="overflow-x:auto;">
+    <table id="userTable" style="width:100%; border-collapse:collapse;">
+        <thead>
+            <tr style="background: linear-gradient(135deg, #667eea15 0%, #764ba215 100%);">
+                <th style="padding:12px;">ID</th>
+                <th style="padding:12px;">Логин</th>
+                <th style="padding:12px;">Дата регистрации</th>
+                <th style="padding:12px;">Роль</th>
+                <th style="padding:12px;">Действия</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for u in users %}
+            {% if u.is_admin %}
+            <tr style="border-bottom:1px solid #f0f0f0; background:#f8f9ff;">
+            {% else %}
+            <tr style="border-bottom:1px solid #f0f0f0;">
+            {% endif %}
+                <td style="padding:12px; color:#7f8c8d;">{{ u.id }}</td>
+                {% if u.is_admin %}
+                <td style="padding:12px; font-weight:600; color:#667eea;">{{ u.username }}</td>
+                {% else %}
+                <td style="padding:12px; font-weight:600; color:#2c3e50;">{{ u.username }}</td>
+                {% endif %}
+                <td style="padding:12px;">{{ u.created_at.strftime('%d.%m.%Y %H:%M') }}</td>
+                <td style="padding:12px;">{{ 'Админ' if u.is_admin else 'Работник' }}</td>
+                <td style="padding:12px;">
+                    <a href="/history?user_id={{ u.id }}" class="btn btn-secondary" style="font-size:0.9rem;">История</a>
+                    <a href="/api/stats/user/{{ u.id }}" class="btn btn-secondary" style="font-size:0.9rem;">Статистика</a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    </div>
+</div>
+<script>
+const filter = document.getElementById('userFilter');
+const table = document.getElementById('userTable');
+const userCount = document.getElementById('userCount');
+filter.addEventListener('input', function() {
+    let val = this.value.toLowerCase();
+    let rows = table.querySelectorAll('tbody tr');
+    let shown = 0;
+    rows.forEach(r => {
+        let name = r.children[1].textContent.toLowerCase();
+        if(name.includes(val)) { r.style.display=''; shown++; }
+        else { r.style.display='none'; }
+    });
+    userCount.textContent = shown;
+});
+</script>
+{% endblock %}
