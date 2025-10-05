@@ -1,0 +1,144 @@
+{% extends "base.html" %}
+
+{% block title %}{{ conversation.filename }} - OperaMind{% endblock %}
+
+{% block content %}
+<div style="margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center;">
+    <a href="{{ url_for('history') }}" style="color: #667eea; text-decoration: none; font-weight: 500;">
+        ← Назад к истории
+    </a>
+    
+    {% if conversation.analysis %}
+    <a href="{{ url_for('download_report', conversation_id=conversation.id) }}" class="btn" style="background: #27ae60;">
+        📥 Скачать отчёт
+    </a>
+    {% endif %}
+</div>
+
+<div class="card">
+    <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 25px;">
+        <div>
+            <h2 style="color: #2c3e50; margin-bottom: 10px;">📞 {{ conversation.filename }}</h2>
+            <p style="color: #7f8c8d;">
+                Загружено: {{ conversation.upload_date.strftime('%d.%m.%Y в %H:%M') }}
+            </p>
+            <p style="margin-top: 10px;">
+                Статус: 
+                {% if conversation.status == 'completed' %}
+                    <span style="background: #27ae60; color: white; padding: 4px 12px; border-radius: 12px;">✅ Завершено</span>
+                {% elif conversation.status == 'transcribing' %}
+                    <span style="background: #3498db; color: white; padding: 4px 12px; border-radius: 12px;">🎧 Транскрипция...</span>
+                {% elif conversation.status == 'analyzing' %}
+                    <span style="background: #f39c12; color: white; padding: 4px 12px; border-radius: 12px;">🤖 Анализ...</span>
+                {% elif conversation.status == 'error' %}
+                    <span style="background: #e74c3c; color: white; padding: 4px 12px; border-radius: 12px;">❌ Ошибка</span>
+                {% else %}
+                    <span style="background: #95a5a6; color: white; padding: 4px 12px; border-radius: 12px;">⏳ Ожидает</span>
+                {% endif %}
+            </p>
+        </div>
+        <form method="POST" action="{{ url_for('delete_conversation', conversation_id=conversation.id) }}" 
+              onsubmit="return confirm('Удалить этот разговор?');">
+            <button type="submit" class="btn btn-danger">🗑️ Удалить</button>
+        </form>
+    </div>
+
+    {% if conversation.analysis %}
+    <!-- ОСНОВНЫЕ МЕТРИКИ -->
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 30px;">
+        <div style="background: linear-gradient(135deg, #667eea15 0%, #764ba215 100%); padding: 20px; border-radius: 10px;">
+            <p style="color: #7f8c8d; font-size: 0.9rem; margin-bottom: 5px;">ТЕМА</p>
+            <p style="color: #2c3e50; font-weight: 600; font-size: 1.1rem;">{{ conversation.analysis.topic }}</p>
+        </div>
+
+        <div style="background: linear-gradient(135deg, #667eea15 0%, #764ba215 100%); padding: 20px; border-radius: 10px;">
+            <p style="color: #7f8c8d; font-size: 0.9rem; margin-bottom: 5px;">КАТЕГОРИЯ</p>
+            <p style="color: #2c3e50; font-weight: 600; font-size: 1.1rem;">{{ conversation.analysis.category }}</p>
+        </div>
+
+        <div style="background: linear-gradient(135deg, #667eea15 0%, #764ba215 100%); padding: 20px; border-radius: 10px;">
+            <p style="color: #7f8c8d; font-size: 0.9rem; margin-bottom: 5px;">ТОНАЛЬНОСТЬ</p>
+            {% if conversation.analysis.sentiment == 'позитивный' %}
+                <p style="font-weight: 600; font-size: 1.1rem; color: #27ae60;">{{ conversation.analysis.sentiment }}</p>
+            {% elif conversation.analysis.sentiment == 'негативный' %}
+                <p style="font-weight: 600; font-size: 1.1rem; color: #e74c3c;">{{ conversation.analysis.sentiment }}</p>
+            {% else %}
+                <p style="font-weight: 600; font-size: 1.1rem; color: #f39c12;">{{ conversation.analysis.sentiment }}</p>
+            {% endif %}
+        </div>
+
+        <div style="background: linear-gradient(135deg, #667eea15 0%, #764ba215 100%); padding: 20px; border-radius: 10px;">
+            <p style="color: #7f8c8d; font-size: 0.9rem; margin-bottom: 5px;">СРОЧНОСТЬ</p>
+            {% if conversation.analysis.urgency == 'критическая' %}
+                <p style="font-weight: 600; font-size: 1.1rem; color: #e74c3c;">{{ conversation.analysis.urgency }}</p>
+            {% elif conversation.analysis.urgency == 'высокая' %}
+                <p style="font-weight: 600; font-size: 1.1rem; color: #f39c12;">{{ conversation.analysis.urgency }}</p>
+            {% elif conversation.analysis.urgency == 'средняя' %}
+                <p style="font-weight: 600; font-size: 1.1rem; color: #3498db;">{{ conversation.analysis.urgency }}</p>
+            {% else %}
+                <p style="font-weight: 600; font-size: 1.1rem; color: #95a5a6;">{{ conversation.analysis.urgency }}</p>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- КАЧЕСТВО ОПЕРАТОРА -->
+    {% if conversation.analysis.operator_quality %}
+    <div style="background: #f8f9ff; padding: 20px; border-radius: 10px; margin-bottom: 25px; border-left: 4px solid #667eea;">
+        <h3 style="color: #2c3e50; margin-bottom: 10px;">⭐ Качество работы оператора</h3>
+        <p style="font-size: 1.2rem; font-weight: 600; color: #667eea;">{{ conversation.analysis.operator_quality }}</p>
+    </div>
+    {% endif %}
+
+    <!-- КРАТКОЕ СОДЕРЖАНИЕ -->
+    <div style="background: #f8f9ff; padding: 25px; border-radius: 10px; margin-bottom: 25px; border-left: 4px solid #667eea;">
+        <h3 style="color: #2c3e50; margin-bottom: 15px;">📝 Краткое содержание</h3>
+        <p style="color: #555; line-height: 1.8;">{{ conversation.analysis.summary }}</p>
+    </div>
+
+    <!-- ПОДРОБНЫЙ АНАЛИЗ -->
+    {% if conversation.analysis.detailed_analysis %}
+    <div style="background: #fff3cd; padding: 25px; border-radius: 10px; margin-bottom: 25px; border-left: 4px solid #ffc107;">
+        <h3 style="color: #2c3e50; margin-bottom: 15px;">🔍 Подробный анализ</h3>
+        <p style="color: #555; line-height: 1.8; white-space: pre-line;">{{ conversation.analysis.detailed_analysis }}</p>
+    </div>
+    {% endif %}
+
+    <!-- РЕКОМЕНДАЦИИ -->
+    {% if conversation.analysis.recommendations %}
+    <div style="background: #d4edda; padding: 25px; border-radius: 10px; margin-bottom: 25px; border-left: 4px solid #28a745;">
+        <h3 style="color: #2c3e50; margin-bottom: 15px;">💡 Рекомендации</h3>
+        <p style="color: #555; line-height: 1.8; white-space: pre-line;">{{ conversation.analysis.recommendations }}</p>
+    </div>
+    {% endif %}
+
+    <!-- КЛЮЧЕВЫЕ СЛОВА -->
+    <div style="margin-bottom: 25px;">
+        <h3 style="color: #2c3e50; margin-bottom: 15px;">🔑 Ключевые слова</h3>
+        <div style="display: flex; flex-wrap: wrap; gap: 10px;">
+            {% if conversation.analysis.keywords %}
+                {% set keywords = conversation.analysis.keywords|from_json %}
+                {% for keyword in keywords %}
+                <span style="background: #667eea; color: white; padding: 8px 16px; border-radius: 20px; font-weight: 500;">
+                    {{ keyword }}
+                </span>
+                {% endfor %}
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- ПОЛНАЯ ТРАНСКРИПЦИЯ -->
+    <div style="background: #f8f9fa; padding: 25px; border-radius: 10px;">
+        <h3 style="color: #2c3e50; margin-bottom: 15px;">📄 Полная транскрипция</h3>
+        <div style="background: white; padding: 20px; border-radius: 8px; max-height: 500px; overflow-y: auto; line-height: 1.8; color: #2c3e50; white-space: pre-line;">{{ conversation.analysis.transcript }}</div>
+    </div>
+
+    {% else %}
+    <!-- НЕТ АНАЛИЗА -->
+    <div style="text-align: center; padding: 60px 20px; color: #7f8c8d;">
+        <p style="font-size: 3rem; margin-bottom: 20px;">⏳</p>
+        <h3 style="color: #2c3e50; margin-bottom: 10px;">Анализ в процессе</h3>
+        <p>Обработка файла может занять некоторое время</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

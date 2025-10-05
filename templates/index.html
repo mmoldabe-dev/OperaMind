@@ -1,52 +1,84 @@
 {% extends "base.html" %}
 
-{% block title %}Загрузка файлов{% endblock %}
+{% block title %}Загрузка файлов - OperaMind{% endblock %}
 
 {% block content %}
-<div style="max-width: 600px; margin: 0 auto;">
+<div style="max-width: 700px; margin: 0 auto;">
     <div class="card">
-        <h2 style="margin-bottom: 20px; color: #2c3e50;">📤 Загрузка аудиофайла</h2>
-        
+        <h2 style="margin-bottom: 10px; color: #2c3e50;">📤 Загрузка файла для анализа</h2>
         <p style="color: #7f8c8d; margin-bottom: 30px;">
-            Загрузите аудиозапись разговора оператора для анализа
+            Загрузите аудиофайл или готовую транскрипцию
         </p>
         
         <form method="POST" action="{{ url_for('upload_file') }}" enctype="multipart/form-data">
-            <div style="margin-bottom: 20px;">
-                <label style="display: block; margin-bottom: 10px; font-weight: 500;">Выберите файл</label>
-                <input type="file" name="file" accept=".mp3,.wav,.m4a" required
-                       style="width: 100%; padding: 10px; border: 2px dashed #3498db; border-radius: 4px; background: #ecf0f1;">
+            <div style="margin-bottom: 25px;">
+                <label style="display: block; margin-bottom: 12px; font-weight: 600; color: #2c3e50;">
+                    📁 Выберите файл
+                </label>
+                <div style="position: relative;">
+                    <input type="file" name="file" accept=".mp3,.wav,.m4a,.ogg,.txt" required
+                           style="width: 100%; padding: 20px; border: 3px dashed #667eea; border-radius: 12px; background: #f8f9ff; cursor: pointer; font-size: 1rem;"
+                           onchange="this.nextElementSibling.textContent = this.files[0]?.name || 'Файл не выбран'">
+                    <p style="margin-top: 10px; color: #667eea; font-weight: 500;">Файл не выбран</p>
+                </div>
             </div>
             
-            <div style="background: #e8f4f8; padding: 15px; border-radius: 4px; margin-bottom: 20px;">
-                <small style="color: #2980b9;">
-                    <strong>Поддерживаемые форматы:</strong> MP3, WAV, M4A<br>
-                    <strong>Максимальный размер:</strong> 50 МБ
-                </small>
+            <div style="background: linear-gradient(135deg, #667eea15 0%, #764ba215 100%); padding: 20px; border-radius: 10px; margin-bottom: 25px;">
+                <p style="color: #2c3e50; margin-bottom: 10px;"><strong>🎵 Аудиофайлы:</strong></p>
+                <p style="color: #7f8c8d; margin-bottom: 15px;">MP3, WAV, M4A, OGG (до 50 МБ)</p>
+                <p style="color: #2c3e50; margin-bottom: 10px;"><strong>📄 Текстовые файлы:</strong></p>
+                <p style="color: #7f8c8d;">TXT с готовой транскрипцией</p>
             </div>
             
-            <button type="submit" class="btn" style="width: 100%; padding: 12px;">
-                Загрузить файл
+            <button type="submit" class="btn" style="width: 100%; padding: 16px; font-size: 1.1rem;">
+                🚀 Загрузить и обработать
             </button>
         </form>
     </div>
     
     <div style="margin-top: 30px; text-align: center;">
-        <a href="{{ url_for('history') }}" class="btn btn-secondary">
-            📋 Просмотреть историю загрузок
+        <a href="{{ url_for('history') }}" class="btn btn-secondary" style="padding: 14px 30px;">
+            📋 История загрузок
         </a>
     </div>
 </div>
 
-<div style="margin-top: 40px;">
+<div style="margin-top: 50px; max-width: 700px; margin-left: auto; margin-right: auto;">
     <div class="card">
-        <h3 style="margin-bottom: 15px; color: #2c3e50;">ℹ️ Информация</h3>
-        <ul style="color: #555; line-height: 2;">
-            <li>Все загруженные файлы сохраняются в системе</li>
-            <li>Для каждого разговора создается запись в базе данных</li>
-            <li>В будущем будет доступен автоматический анализ</li>
-            <li>Вы можете просмотреть историю всех загрузок</li>
-        </ul>
+        <h3 style="margin-bottom: 20px; color: #2c3e50;">🔄 Процесс обработки</h3>
+        <div style="display: grid; gap: 20px;">
+            <div style="display: flex; gap: 15px; align-items: start;">
+                <div style="background: #667eea; color: white; width: 35px; height: 35px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; flex-shrink: 0;">1</div>
+                <div>
+                    <strong style="color: #2c3e50;">Загрузка файла</strong>
+                    <p style="color: #7f8c8d; margin-top: 5px;">Аудио или текстовый файл сохраняется в системе</p>
+                </div>
+            </div>
+            
+            <div style="display: flex; gap: 15px; align-items: start;">
+                <div style="background: #667eea; color: white; width: 35px; height: 35px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; flex-shrink: 0;">2</div>
+                <div>
+                    <strong style="color: #2c3e50;">Транскрипция</strong>
+                    <p style="color: #7f8c8d; margin-top: 5px;">Аудио распознаётся в текст через Gemini AI</p>
+                </div>
+            </div>
+            
+            <div style="display: flex; gap: 15px; align-items: start;">
+                <div style="background: #667eea; color: white; width: 35px; height: 35px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; flex-shrink: 0;">3</div>
+                <div>
+                    <strong style="color: #2c3e50;">Анализ текста</strong>
+                    <p style="color: #7f8c8d; margin-top: 5px;">Gemini анализирует разговор: тема, тональность, качество, рекомендации</p>
+                </div>
+            </div>
+
+            <div style="display: flex; gap: 15px; align-items: start;">
+                <div style="background: #667eea; color: white; width: 35px; height: 35px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; flex-shrink: 0;">4</div>
+                <div>
+                    <strong style="color: #2c3e50;">Результаты и отчёт</strong>
+                    <p style="color: #7f8c8d; margin-top: 5px;">Просмотр полного анализа и скачивание отчёта</p>
+                </div>
+            </div>
+        </div>
     </div>
 </div>
 {% endblock %}

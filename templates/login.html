@@ -1,33 +1,43 @@
 {% extends "base.html" %}
 
-{% block title %}Вход в систему{% endblock %}
+{% block title %}Вход в OperaMind{% endblock %}
 
 {% block content %}
-<div style="max-width: 400px; margin: 50px auto;">
+<div style="max-width: 450px; margin: 80px auto;">
     <div class="card">
-        <h2 style="margin-bottom: 30px; text-align: center; color: #2c3e50;">Вход в систему</h2>
+        <div style="text-align: center; margin-bottom: 30px;">
+            <div style="font-size: 4rem; margin-bottom: 20px;">🎙️</div>
+            <h2 style="color: #667eea; margin-bottom: 10px;">OperaMind</h2>
+            <p style="color: #7f8c8d;">Система анализа разговоров операторов</p>
+        </div>
         
         <form method="POST" action="{{ url_for('login') }}">
             <div style="margin-bottom: 20px;">
-                <label style="display: block; margin-bottom: 5px; font-weight: 500;">Логин</label>
-                <input type="text" name="username" required 
-                       style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 1rem;">
+                <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #2c3e50;">Логин</label>
+                <input type="text" name="username" required autofocus
+                       style="width: 100%; padding: 12px; border: 2px solid #e0e0e0; border-radius: 8px; font-size: 1rem; transition: border 0.3s;"
+                       onfocus="this.style.borderColor='#667eea'"
+                       onblur="this.style.borderColor='#e0e0e0'">
             </div>
             
             <div style="margin-bottom: 25px;">
-                <label style="display: block; margin-bottom: 5px; font-weight: 500;">Пароль</label>
+                <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #2c3e50;">Пароль</label>
                 <input type="password" name="password" required 
-                       style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 1rem;">
+                       style="width: 100%; padding: 12px; border: 2px solid #e0e0e0; border-radius: 8px; font-size: 1rem; transition: border 0.3s;"
+                       onfocus="this.style.borderColor='#667eea'"
+                       onblur="this.style.borderColor='#e0e0e0'">
             </div>
             
-            <button type="submit" class="btn" style="width: 100%; padding: 12px;">Войти</button>
+            <button type="submit" class="btn" style="width: 100%; padding: 14px; font-size: 1.1rem;">
+                🔓 Войти в систему
+            </button>
         </form>
         
-        <div style="margin-top: 20px; padding: 15px; background: #ecf0f1; border-radius: 4px; text-align: center;">
-            <small style="color: #7f8c8d;">
-                Демо доступ:<br>
+        <div style="margin-top: 25px; padding: 20px; background: linear-gradient(135deg, #667eea15 0%, #764ba215 100%); border-radius: 8px; text-align: center;">
+            <p style="color: #7f8c8d; margin-bottom: 10px;">📌 Демо доступ:</p>
+            <p style="font-family: monospace; font-size: 1.1rem; color: #2c3e50;">
                 <strong>operator</strong> / <strong>demo123</strong>
-            </small>
+            </p>
         </div>
     </div>
 </div>

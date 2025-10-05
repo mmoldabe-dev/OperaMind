@@ -1,11 +1,14 @@
 {% extends "base.html" %}
 
-{% block title %}История разговоров{% endblock %}
+{% block title %}История разговоров - OperaMind{% endblock %}
 
 {% block content %}
 <div class="card">
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px;">
-        <h2 style="color: #2c3e50;">📋 История разговоров</h2>
+        <div>
+            <h2 style="color: #2c3e50; margin-bottom: 5px;">📋 История разговоров</h2>
+            <p style="color: #7f8c8d;">Все загруженные аудиофайлы</p>
+        </div>
         <a href="{{ url_for('index') }}" class="btn">+ Загрузить новый</a>
     </div>
     
@@ -13,39 +16,47 @@
     <div style="overflow-x: auto;">
         <table style="width: 100%; border-collapse: collapse;">
             <thead>
-                <tr style="background: #ecf0f1;">
-                    <th style="padding: 12px; text-align: left; border-bottom: 2px solid #bdc3c7;">ID</th>
-                    <th style="padding: 12px; text-align: left; border-bottom: 2px solid #bdc3c7;">Файл</th>
-                    <th style="padding: 12px; text-align: left; border-bottom: 2px solid #bdc3c7;">Дата загрузки</th>
-                    <th style="padding: 12px; text-align: left; border-bottom: 2px solid #bdc3c7;">Статус</th>
-                    <th style="padding: 12px; text-align: left; border-bottom: 2px solid #bdc3c7;">Действия</th>
+                <tr style="background: linear-gradient(135deg, #667eea15 0%, #764ba215 100%);">
+                    <th style="padding: 15px; text-align: left; font-weight: 600; color: #2c3e50; border-bottom: 2px solid #667eea;">ID</th>
+                    <th style="padding: 15px; text-align: left; font-weight: 600; color: #2c3e50; border-bottom: 2px solid #667eea;">Файл</th>
+                    <th style="padding: 15px; text-align: left; font-weight: 600; color: #2c3e50; border-bottom: 2px solid #667eea;">Дата загрузки</th>
+                    <th style="padding: 15px; text-align: left; font-weight: 600; color: #2c3e50; border-bottom: 2px solid #667eea;">Статус</th>
+                    <th style="padding: 15px; text-align: left; font-weight: 600; color: #2c3e50; border-bottom: 2px solid #667eea;">Действия</th>
                 </tr>
             </thead>
             <tbody>
                 {% for conv in conversations %}
-                <tr style="border-bottom: 1px solid #ecf0f1;">
-                    <td style="padding: 12px;">{{ conv.id }}</td>
-                    <td style="padding: 12px;">
-                        <strong>{{ conv.filename }}</strong>
+                <tr style="border-bottom: 1px solid #f0f0f0; transition: background 0.2s;" 
+                    onmouseover="this.style.background='#f8f9ff'" 
+                    onmouseout="this.style.background='white'">
+                    <td style="padding: 15px; color: #7f8c8d;">{{ conv.id }}</td>
+                    <td style="padding: 15px;">
+                        <div style="display: flex; align-items: center; gap: 10px;">
+                            <span style="font-size: 1.5rem;">🎵</span>
+                            <strong style="color: #2c3e50;">{{ conv.filename }}</strong>
+                        </div>
                     </td>
-                    <td style="padding: 12px;">{{ conv.upload_date.strftime('%d.%m.%Y %H:%M') }}</td>
-                    <td style="padding: 12px;">
+                    <td style="padding: 15px; color: #7f8c8d;">
+                        {{ conv.upload_date.strftime('%d.%m.%Y') }}<br>
+                        <small>{{ conv.upload_date.strftime('%H:%M') }}</small>
+                    </td>
+                    <td style="padding: 15px;">
                         {% if conv.analysis %}
-                        <span style="background: #27ae60; color: white; padding: 4px 12px; border-radius: 12px; font-size: 0.85rem;">
-                            Проанализирован
+                        <span style="background: #27ae60; color: white; padding: 6px 14px; border-radius: 20px; font-size: 0.85rem; font-weight: 600;">
+                            ✅ Проанализирован
                         </span>
                         {% else %}
-                        <span style="background: #f39c12; color: white; padding: 4px 12px; border-radius: 12px; font-size: 0.85rem;">
-                            Ожидает анализа
+                        <span style="background: #f39c12; color: white; padding: 6px 14px; border-radius: 20px; font-size: 0.85rem; font-weight: 600;">
+                            ⏳ Ожидает
                         </span>
                         {% endif %}
                     </td>
-                    <td style="padding: 12px;">
+                    <td style="padding: 15px;">
                         <form method="POST" action="{{ url_for('delete_conversation', conversation_id=conv.id) }}" 
                               style="display: inline;"
                               onsubmit="return confirm('Вы уверены, что хотите удалить этот разговор?');">
-                            <button type="submit" class="btn btn-danger" style="padding: 6px 12px; font-size: 0.9rem;">
-                                Удалить
+                            <button type="submit" class="btn btn-danger" style="padding: 8px 16px; font-size: 0.9rem;">
+                                🗑️ Удалить
                             </button>
                         </form>
                     </td>
@@ -55,18 +66,24 @@
         </table>
     </div>
     
-    <div style="margin-top: 20px; padding: 15px; background: #e8f4f8; border-radius: 4px;">
-        <small style="color: #2980b9;">
-            📊 Всего разговоров: <strong>{{ conversations|length }}</strong>
-        </small>
+    <div style="margin-top: 25px; padding: 20px; background: linear-gradient(135deg, #667eea15 0%, #764ba215 100%); border-radius: 10px; display: flex; justify-content: space-between; align-items: center;">
+        <div>
+            <p style="color: #2c3e50; font-weight: 600;">📊 Всего разговоров: <strong style="color: #667eea; font-size: 1.2rem;">{{ conversations|length }}</strong></p>
+        </div>
+        <div>
+            <p style="color: #2c3e50;">
+                Проанализировано: <strong style="color: #27ae60;">{{ conversations|selectattr('analysis')|list|length }}</strong> | 
+                Ожидает: <strong style="color: #f39c12;">{{ conversations|rejectattr('analysis')|list|length }}</strong>
+            </p>
+        </div>
     </div>
     {% else %}
-    <div style="text-align: center; padding: 60px 20px; color: #7f8c8d;">
-        <p style="font-size: 3rem; margin-bottom: 20px;">📭</p>
-        <h3 style="margin-bottom: 10px;">Пока нет загруженных разговоров</h3>
-        <p>Загрузите первый аудиофайл для начала работы</p>
-        <a href="{{ url_for('index') }}" class="btn" style="margin-top: 20px;">
-            Загрузить файл
+    <div style="text-align: center; padding: 80px 20px; color: #7f8c8d;">
+        <p style="font-size: 5rem; margin-bottom: 20px;">📭</p>
+        <h3 style="color: #2c3e50; margin-bottom: 15px;">Пока нет загруженных разговоров</h3>
+        <p style="margin-bottom: 30px;">Загрузите первый аудиофайл для начала работы</p>
+        <a href="{{ url_for('index') }}" class="btn" style="padding: 14px 30px; font-size: 1.1rem;">
+            📤 Загрузить первый файл
         </a>
     </div>
     {% endif %}
