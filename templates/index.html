@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+
+{% block title %}Загрузка файлов{% endblock %}
+
+{% block content %}
+<div style="max-width: 600px; margin: 0 auto;">
+    <div class="card">
+        <h2 style="margin-bottom: 20px; color: #2c3e50;">📤 Загрузка аудиофайла</h2>
+        
+        <p style="color: #7f8c8d; margin-bottom: 30px;">
+            Загрузите аудиозапись разговора оператора для анализа
+        </p>
+        
+        <form method="POST" action="{{ url_for('upload_file') }}" enctype="multipart/form-data">
+            <div style="margin-bottom: 20px;">
+                <label style="display: block; margin-bottom: 10px; font-weight: 500;">Выберите файл</label>
+                <input type="file" name="file" accept=".mp3,.wav,.m4a" required
+                       style="width: 100%; padding: 10px; border: 2px dashed #3498db; border-radius: 4px; background: #ecf0f1;">
+            </div>
+            
+            <div style="background: #e8f4f8; padding: 15px; border-radius: 4px; margin-bottom: 20px;">
+                <small style="color: #2980b9;">
+                    <strong>Поддерживаемые форматы:</strong> MP3, WAV, M4A<br>
+                    <strong>Максимальный размер:</strong> 50 МБ
+                </small>
+            </div>
+            
+            <button type="submit" class="btn" style="width: 100%; padding: 12px;">
+                Загрузить файл
+            </button>
+        </form>
+    </div>
+    
+    <div style="margin-top: 30px; text-align: center;">
+        <a href="{{ url_for('history') }}" class="btn btn-secondary">
+            📋 Просмотреть историю загрузок
+        </a>
+    </div>
+</div>
+
+<div style="margin-top: 40px;">
+    <div class="card">
+        <h3 style="margin-bottom: 15px; color: #2c3e50;">ℹ️ Информация</h3>
+        <ul style="color: #555; line-height: 2;">
+            <li>Все загруженные файлы сохраняются в системе</li>
+            <li>Для каждого разговора создается запись в базе данных</li>
+            <li>В будущем будет доступен автоматический анализ</li>
+            <li>Вы можете просмотреть историю всех загрузок</li>
+        </ul>
+    </div>
+</div>
+{% endblock %}

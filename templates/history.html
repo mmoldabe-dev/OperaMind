@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+
+{% block title %}История разговоров{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px;">
+        <h2 style="color: #2c3e50;">📋 История разговоров</h2>
+        <a href="{{ url_for('index') }}" class="btn">+ Загрузить новый</a>
+    </div>
+    
+    {% if conversations %}
+    <div style="overflow-x: auto;">
+        <table style="width: 100%; border-collapse: collapse;">
+            <thead>
+                <tr style="background: #ecf0f1;">
+                    <th style="padding: 12px; text-align: left; border-bottom: 2px solid #bdc3c7;">ID</th>
+                    <th style="padding: 12px; text-align: left; border-bottom: 2px solid #bdc3c7;">Файл</th>
+                    <th style="padding: 12px; text-align: left; border-bottom: 2px solid #bdc3c7;">Дата загрузки</th>
+                    <th style="padding: 12px; text-align: left; border-bottom: 2px solid #bdc3c7;">Статус</th>
+                    <th style="padding: 12px; text-align: left; border-bottom: 2px solid #bdc3c7;">Действия</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for conv in conversations %}
+                <tr style="border-bottom: 1px solid #ecf0f1;">
+                    <td style="padding: 12px;">{{ conv.id }}</td>
+                    <td style="padding: 12px;">
+                        <strong>{{ conv.filename }}</strong>
+                    </td>
+                    <td style="padding: 12px;">{{ conv.upload_date.strftime('%d.%m.%Y %H:%M') }}</td>
+                    <td style="padding: 12px;">
+                        {% if conv.analysis %}
+                        <span style="background: #27ae60; color: white; padding: 4px 12px; border-radius: 12px; font-size: 0.85rem;">
+                            Проанализирован
+                        </span>
+                        {% else %}
+                        <span style="background: #f39c12; color: white; padding: 4px 12px; border-radius: 12px; font-size: 0.85rem;">
+                            Ожидает анализа
+                        </span>
+                        {% endif %}
+                    </td>
+                    <td style="padding: 12px;">
+                        <form method="POST" action="{{ url_for('delete_conversation', conversation_id=conv.id) }}" 
+                              style="display: inline;"
+                              onsubmit="return confirm('Вы уверены, что хотите удалить этот разговор?');">
+                            <button type="submit" class="btn btn-danger" style="padding: 6px 12px; font-size: 0.9rem;">
+                                Удалить
+                            </button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    
+    <div style="margin-top: 20px; padding: 15px; background: #e8f4f8; border-radius: 4px;">
+        <small style="color: #2980b9;">
+            📊 Всего разговоров: <strong>{{ conversations|length }}</strong>
+        </small>
+    </div>
+    {% else %}
+    <div style="text-align: center; padding: 60px 20px; color: #7f8c8d;">
+        <p style="font-size: 3rem; margin-bottom: 20px;">📭</p>
+        <h3 style="margin-bottom: 10px;">Пока нет загруженных разговоров</h3>
+        <p>Загрузите первый аудиофайл для начала работы</p>
+        <a href="{{ url_for('index') }}" class="btn" style="margin-top: 20px;">
+            Загрузить файл
+        </a>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
