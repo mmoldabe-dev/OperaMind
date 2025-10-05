@@ -6,6 +6,14 @@ import speech_recognition as sr
 from pydub import AudioSegment
 from pathlib import Path
 
+# Опционально Whisper (faster-whisper)
+_WHISPER_AVAILABLE = False
+try:
+    from faster_whisper import WhisperModel
+    _WHISPER_AVAILABLE = True
+except Exception:
+    _WHISPER_AVAILABLE = False
+
 try:
     from vosk import Model as VoskModel, KaldiRecognizer
     _VOSK_AVAILABLE = True
@@ -68,8 +76,9 @@ def transcribe_audio_file(filepath: str):
     """Расширенная транскрипция с попыткой Vosk.
 
     Алгоритм:
-      1. Пытаемся использовать Vosk (если доступен и есть модель VOSK_MODEL_PATH).
-      2. Если Vosk недоступен — fallback на Google SpeechRecognition (цельный текст + эвристика).
+            1. (Опционально) Whisper (ENABLE_WHISPER=1, если установлен faster-whisper) для максимально точной транскрипции.
+            2. Затем пытаемся Vosk (если доступен и есть модель VOSK_MODEL_PATH).
+            3. Если ни Whisper ни Vosk — fallback Google SpeechRecognition (chunked + эвристика).
     """
     print(f"📤 Загружаю: {filepath}")
     audio = AudioSegment.from_file(filepath)
@@ -77,6 +86,59 @@ def transcribe_audio_file(filepath: str):
     audio_proc = audio.set_frame_rate(16000).set_channels(1)
     duration_min = original_ms / 60000
     print(f"⏱️ Длительность: {duration_min:.1f} мин")
+
+    # --- Попытка Whisper (если включено) ---
+    enable_whisper = os.getenv('ENABLE_WHISPER', '0') == '1'
+    whisper_model_name = os.getenv('WHISPER_MODEL', 'medium')
+    if enable_whisper and _WHISPER_AVAILABLE:
+        try:
+            print(f"🟣 Whisper backend: модель={whisper_model_name}")
+            # faster-whisper отдаёт уже сегменты с таймкодами и словами (если word_timestamps=True)
+            model = WhisperModel(whisper_model_name, device=os.getenv('WHISPER_DEVICE','cpu'), compute_type=os.getenv('WHISPER_COMPUTE','int8'))
+            segments_iter, info = model.transcribe(str(filepath), language='ru', word_timestamps=True)
+            segments = []
+            all_words_flat = []
+            idx = 0
+            for seg in segments_iter:
+                words = []
+                for w in seg.words or []:
+                    words.append({
+                        'w': w.word.strip(),
+                        'start': round(w.start,3),
+                        'end': round(w.end,3)
+                    })
+                    all_words_flat.append(w.word.strip())
+                text_clean = seg.text.strip()
+                if not text_clean:
+                    continue
+                segments.append({
+                    'index': idx,
+                    'speaker': 'unknown',
+                    'segment_type': 'speech',
+                    'start': round(seg.start,3),
+                    'end': round(seg.end,3),
+                    'text': text_clean,
+                    'words': words,
+                    'gap_from_prev': 0.0 if idx==0 else round(seg.start - segments[-1]['end'],3)
+                })
+                idx += 1
+            # Простое чередование ролей (можно позже кластеризовать — reused logic с Vosk)
+            for i, seg in enumerate(segments):
+                seg['speaker'] = 'client' if i % 2 == 0 else 'operator'
+            flat_text = ' '.join(all_words_flat).strip()
+            structured = {
+                'text': flat_text,
+                'segments': segments,
+                'meta': {
+                    'duration_sec': round(original_ms / 1000.0, 3),
+                    'method': 'whisper',
+                    'model': whisper_model_name
+                }
+            }
+            print(f"✅ Whisper готово: {len(flat_text)} символов, сегментов: {len(segments)}")
+            return json.dumps(structured, ensure_ascii=False)
+        except Exception as we:
+            print(f"⚠️ Whisper не удалось: {we}. Пробую Vosk/Google")
 
     # --- Попытка Vosk ---
     model_path = os.getenv('VOSK_MODEL_PATH')
@@ -119,14 +181,17 @@ def transcribe_audio_file(filepath: str):
             if not raw_words:
                 raise RuntimeError("Пустой результат Vosk")
 
-            # Сегментация по паузам > 0.8s
+            # Сегментация по паузам > 0.8s + вставка событий, если включено FULL_AUDIO_EVENTS
             pause_threshold = float(os.getenv('PAUSE_THRESHOLD', '0.8'))
-            grouped = []  # список сегментов с полями words, start, end
+            full_audio_events = os.getenv('FULL_AUDIO_EVENTS', '0') == '1'
+            grouped = []  # список сегментов речи (слов), events будет позже
             current = [raw_words[0]]
+            gaps = []  # [(gap_start, gap_end, gap_duration)]
             for prev, cur in zip(raw_words, raw_words[1:]):
                 gap = cur['start'] - prev['end']
                 if gap > pause_threshold:
                     grouped.append(current)
+                    gaps.append((prev['end'], cur['start'], gap))
                     current = [cur]
                 else:
                     current.append(cur)
@@ -136,14 +201,17 @@ def transcribe_audio_file(filepath: str):
             # Извлечение текстов сегментов
             segments = []
             full_words_flat = []
-            for idx, g in enumerate(grouped):
+            seg_counter = 0
+            def add_speech_segment(g):
+                nonlocal seg_counter
                 start_t = g[0]['start']
                 end_t = g[-1]['end']
                 text_seg = ' '.join(w['w'] for w in g)
                 full_words_flat.extend(w['w'] for w in g)
                 segments.append({
-                    'index': idx,
-                    'speaker': 'unknown',  # временно, определим позже
+                    'index': seg_counter,
+                    'speaker': 'unknown',
+                    'segment_type': 'speech',
                     'start': round(start_t, 3),
                     'end': round(end_t, 3),
                     'text': text_seg,
@@ -154,8 +222,31 @@ def transcribe_audio_file(filepath: str):
                             'end': round(w['end'], 3)
                         } for w in g
                     ],
-                    'gap_from_prev': 0.0 if idx == 0 else round(start_t - segments[-1]['end'], 3)
+                    'gap_from_prev': 0.0 if seg_counter == 0 else round(start_t - segments[-1]['end'], 3)
                 })
+                seg_counter += 1
+            def add_gap_segment(gap_start, gap_end, gap_duration):
+                nonlocal seg_counter
+                if not full_audio_events:
+                    return
+                segments.append({
+                    'index': seg_counter,
+                    'speaker': 'none',
+                    'segment_type': 'silence',
+                    'start': round(gap_start, 3),
+                    'end': round(gap_end, 3),
+                    'text': f'[silence {gap_duration:.2f}s]',
+                    'words': [],
+                    'gap_from_prev': 0.0 if seg_counter == 0 else round(gap_start - segments[-1]['end'], 3)
+                })
+                seg_counter += 1
+
+            # Перебираем группы и межгрупповые паузы
+            for i, g in enumerate(grouped):
+                add_speech_segment(g)
+                if i < len(gaps):
+                    gs, ge, gd = gaps[i]
+                    add_gap_segment(gs, ge, gd)
 
             # Кластеризация спикеров (если включено и доступны зависимости)
             clustering_enabled = os.getenv('SPEAKER_CLUSTERING', '1') == '1'
@@ -235,47 +326,209 @@ def transcribe_audio_file(filepath: str):
         except Exception as e:
             print(f"⚠️ Vosk не удалось: {e}. Перехожу к Google SR")
 
-    # --- Fallback Google ---
+    # --- Fallback Google (с опцией chunked) ---
     try:
+        enable_chunked = os.getenv('ENABLE_CHUNKED_GOOGLE', '1') == '1'
+        chunk_seconds = float(os.getenv('GOOGLE_CHUNK_SECONDS', '10'))  # Уменьшил для лучшего качества
+        chunk_overlap = float(os.getenv('GOOGLE_CHUNK_OVERLAP', '3'))   # Увеличил overlap
+        full_audio_events = os.getenv('FULL_AUDIO_EVENTS', '0') == '1'
+        detect_silence = os.getenv('DETECT_SILENCE_GOOGLE', '1') == '1'
+
         recognizer = sr.Recognizer()
         temp_wav = "temp_transcribe.wav"
         audio_proc.export(temp_wav, format="wav")
-        with sr.AudioFile(temp_wav) as source:
-            recognizer.adjust_for_ambient_noise(source, duration=0.5)
-            audio_data = recognizer.record(source)
-            full_text = recognizer.recognize_google(audio_data, language='ru-RU')
+
+        from wave import open as wave_open
+        wf = wave_open(temp_wav, 'rb')
+        sample_rate = wf.getframerate()
+        n_channels = wf.getnchannels()
+        sampwidth = wf.getsampwidth()
+        total_frames = wf.getnframes()
+        total_duration = total_frames / sample_rate
+        wf.close()
+
+        words_master = []  # [{'w':text,'start':s,'end':e}]
+        raw_segments = []  # предварительные распознанные куски
+
+        if enable_chunked and total_duration > chunk_seconds:
+            print(f"🔁 Chunked Google SR: total={total_duration:.1f}s chunk={chunk_seconds}s overlap={chunk_overlap}s")
+            step = chunk_seconds - chunk_overlap
+            if step <= 0:
+                print("⚠️ Некорректные параметры: OVERLAP >= CHUNK. Корректирую шаг.")
+                step = max(chunk_seconds * 0.8, 1.0)
+            start_pos = 0.0
+            idx_chunk = 0
+            max_iter = int(math.ceil(total_duration / step) + 5)
+            iter_count = 0
+            while start_pos < total_duration and iter_count < max_iter:
+                end_pos = min(start_pos + chunk_seconds, total_duration)
+                ms_start = int(start_pos * 1000)
+                ms_end = int(end_pos * 1000)
+                piece = audio_proc[ms_start:ms_end]
+                piece_wav = f"temp_chunk_{idx_chunk}.wav"
+                piece.export(piece_wav, format='wav')
+                with sr.AudioFile(piece_wav) as source:
+                    # Более агрессивная настройка для сохранения слов
+                    recognizer.adjust_for_ambient_noise(source, duration=0.1)
+                    recognizer.energy_threshold = 300  # Ниже порог активации
+                    recognizer.dynamic_energy_threshold = False  # Отключить адаптивный порог
+                    recognizer.pause_threshold = 0.3  # Короче паузы между словами
+                    audio_data = recognizer.record(source)
+                    try:
+                        chunk_text = recognizer.recognize_google(audio_data, language='ru-RU', show_all=False)
+                    except sr.RequestError as re:
+                        # Сетевая ошибка - повторная попытка с менее агрессивными настройками
+                        print(f"⚠️ Сетевая ошибка chunk {idx_chunk}, повторная попытка...")
+                        try:
+                            recognizer.energy_threshold = 500
+                            recognizer.pause_threshold = 0.8
+                            chunk_text = recognizer.recognize_google(audio_data, language='ru-RU')
+                        except Exception:
+                            chunk_text = ''
+                    except sr.UnknownValueError:
+                        # Не удалось распознать - сохраняем как тишину 
+                        chunk_text = '[неразборчиво]'
+                        print(f"🔇 Chunk {idx_chunk}: неразборчивый сегмент")
+                    except Exception as ce:
+                        chunk_text = ''
+                        print(f"⚠️ Chunk {idx_chunk} не распознан: {ce}")
+                os.remove(piece_wav)
+                chunk_text = chunk_text.strip()
+                if chunk_text:
+                    raw_segments.append({
+                        'start': start_pos,
+                        'end': end_pos,
+                        'text': chunk_text
+                    })
+                if end_pos >= total_duration:
+                    break
+                start_pos += step
+                idx_chunk += 1
+                iter_count += 1
+            if iter_count >= max_iter:
+                print("⚠️ Достигнут предохранительный лимит итераций chunked цикла — возможна аномалия параметров.")
+        else:
+            with sr.AudioFile(temp_wav) as source:
+                # Более агрессивная настройка для сохранения слов
+                recognizer.adjust_for_ambient_noise(source, duration=0.3)
+                recognizer.energy_threshold = 300
+                recognizer.dynamic_energy_threshold = False
+                recognizer.pause_threshold = 0.3
+                audio_data = recognizer.record(source)
+                whole_text = ''
+                try:
+                    whole_text = recognizer.recognize_google(audio_data, language='ru-RU', show_all=False)
+                except Exception as ce:
+                    print(f"❌ Google SR ошибка: {ce}")
+                whole_text = whole_text.strip()
+            if whole_text:
+                raw_segments.append({'start': 0.0, 'end': total_duration, 'text': whole_text})
+
         os.remove(temp_wav)
-        full_text = full_text.strip()
-        print(f"✅ Google SR готово: {len(full_text)} символов")
-        sentences = _split_sentences(full_text) or [full_text]
-        total_chars = sum(len(s) for s in sentences) or 1
-        current_start = 0.0
-        segments = []
-        for idx, sent in enumerate(sentences):
-            proportion = len(sent) / total_chars
-            seg_duration = proportion * (original_ms / 1000.0)
-            start = current_start
-            end = start + seg_duration
-            speaker = 'client' if idx % 2 == 0 else 'operator'
-            words = _approx_words(sent, start, end)
-            gap_from_prev = 0.0 if idx == 0 else round(start - segments[-1]['end'], 3)
-            segments.append({
-                'index': idx,
-                'speaker': speaker,
-                'start': round(start, 3),
-                'end': round(end, 3),
-                'text': sent,
-                'words': words,
-                'gap_from_prev': gap_from_prev
-            })
-            current_start = end
+
+        if not raw_segments:
+            raise RuntimeError('Google SR не вернул текст')
+
+        # Дедупликация overlap между chunk'ами
+        deduped_segments = []
+        if len(raw_segments) > 1:
+            deduped_segments.append(raw_segments[0])
+            for i in range(1, len(raw_segments)):
+                prev_text = raw_segments[i-1]['text'].strip()
+                curr_text = raw_segments[i]['text'].strip()
+                
+                # Ищем overlap последних слов предыдущего и первых текущего
+                prev_words = prev_text.split()
+                curr_words = curr_text.split()
+                
+                overlap_len = 0
+                for j in range(1, min(len(prev_words), len(curr_words)) + 1):
+                    if prev_words[-j:] == curr_words[:j]:
+                        overlap_len = j
+                
+                # Удаляем overlap из текущего chunk'а
+                if overlap_len > 0:
+                    dedupe_curr = ' '.join(curr_words[overlap_len:])
+                    print(f"🔄 Удален overlap {overlap_len} слов: {' '.join(curr_words[:overlap_len])}")
+                else:
+                    dedupe_curr = curr_text
+                
+                if dedupe_curr.strip():
+                    deduped_segments.append({
+                        'start': raw_segments[i]['start'],
+                        'end': raw_segments[i]['end'], 
+                        'text': dedupe_curr
+                    })
+        else:
+            deduped_segments = raw_segments
+
+        # Склейка текста после дедупликации
+        full_text = ' '.join(seg['text'] for seg in deduped_segments).strip()
+
+        # Разбиение на сегменты с улучшенным распределением времени
+        final_segments = []
+        idx = 0
+        for rs in deduped_segments:
+            # Разбиваем на предложения внутри кусочка для лучшего time mapping
+            local_sents = _split_sentences(rs['text']) or [rs['text']]
+            span = rs['end'] - rs['start']
+            total_chars = sum(len(s) for s in local_sents) or 1
+            cursor = rs['start']
+            for s_text in local_sents:
+                portion = len(s_text) / total_chars
+                seg_duration = portion * span
+                seg_start = cursor
+                seg_end = seg_start + seg_duration
+                words = _approx_words(s_text, seg_start, seg_end)
+                final_segments.append({
+                    'index': idx,
+                    'speaker': 'unknown',
+                    'segment_type': 'speech',
+                    'start': round(seg_start,3),
+                    'end': round(seg_end,3),
+                    'text': s_text,
+                    'words': words,
+                    'gap_from_prev': 0.0 if idx==0 else round(seg_start - final_segments[-1]['end'],3)
+                })
+                idx += 1
+                cursor = seg_end
+
+        # Вставка сегментов тишины между предложениями если включено
+        if full_audio_events and detect_silence:
+            enriched = []
+            for i, seg in enumerate(final_segments):
+                enriched.append(seg)
+                if i < len(final_segments)-1:
+                    gap = final_segments[i+1]['start'] - seg['end']
+                    if gap > 0.5:  # порог фиксированный для fallback
+                        enriched.append({
+                            'index': idx,
+                            'speaker': 'none',
+                            'segment_type': 'silence',
+                            'start': seg['end'],
+                            'end': final_segments[i+1]['start'],
+                            'text': f'[silence {gap:.2f}s]',
+                            'words': [],
+                            'gap_from_prev': round(seg['end'] - seg['end'],3)
+                        })
+                        idx += 1
+            final_segments = enriched
+
+        # Простое чередование ролей (или оставить unknown)
+        for i, seg in enumerate(final_segments):
+            if seg['speaker'] == 'unknown':
+                seg['speaker'] = 'client' if i % 2 == 0 else 'operator'
+
         structured = {
             'text': full_text,
-            'segments': segments,
+            'segments': final_segments,
             'meta': {
                 'duration_sec': round(original_ms / 1000.0, 3),
-                'method': 'google_speech + heuristic segmentation',
-                'note': 'Роли чередуются; подключите VOSK_MODEL_PATH для Vosk'
+                'method': 'google_speech_chunked' if enable_chunked else 'google_speech_single',
+                'chunked': enable_chunked,
+                'chunk_seconds': chunk_seconds,
+                'overlap_seconds': chunk_overlap,
+                'full_audio_events': full_audio_events
             }
         }
         return json.dumps(structured, ensure_ascii=False)

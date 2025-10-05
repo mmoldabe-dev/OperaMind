@@ -149,9 +149,15 @@
             <span style="background:#fde68a;color:#92400e;padding:4px 10px;border-radius:14px;">Пауза &gt; 0.4 c</span>
             <span style="background:#eef2ff;color:#4338ca;padding:4px 10px;border-radius:14px;">Слова с таймкодами</span>
         </div>
+        <style>
+            #chat .seg.silence { opacity:0.75; }
+            #chat .seg.silence .bubble { background:#fffdf5; border-color:#f7e7c2; font-style:italic; }
+            #chat .seg.silence .bubble:before { content:'⏸️'; margin-right:6px; }
+        </style>
         <div id="chat" style="background: white; padding: 20px; border-radius: 8px; max-height: 600px; overflow-y: auto; color:#2c3e50;">
             {% for seg in structured.segments %}
-                <div class="seg" style="margin-bottom:18px; display:flex; gap:14px; align-items:flex-start;">
+                {% set seg_type = seg.segment_type if 'segment_type' in seg else ('speech') %}
+                <div class="seg {% if seg_type=='silence' %}silence{% endif %}" style="margin-bottom:18px; display:flex; gap:14px; align-items:flex-start;">
                     <div style="width:52px;text-align:center;">
                         {% if seg.speaker == 'client' %}
                             <div style="background:#6366f1;color:white;width:42px;height:42px;display:flex;align-items:center;justify-content:center;border-radius:50%;font-size:0.75rem;">CL</div>
@@ -173,7 +179,9 @@
                             {% endif %}
                         </div>
                         <div class="bubble" style="background:#f9fafb;border:1px solid #e5e7eb;padding:12px 14px;border-radius:10px;line-height:1.6;font-size:0.9rem; position:relative;">
-                            <div style="margin-bottom:8px; white-space:pre-wrap;">{{ seg.text }}</div>
+                            <div style="margin-bottom:8px; white-space:pre-wrap;">
+                                {% if seg_type=='silence' %}<em>{{ seg.text }}</em>{% else %}{{ seg.text }}{% endif %}
+                            </div>
                             {% if seg.words %}
                                 <div style="display:flex; flex-wrap:wrap; gap:4px; margin-top:6px;">
                                     {% for w in seg.words %}
