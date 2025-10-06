@@ -11,9 +11,9 @@ from enum import Enum
 db = SQLAlchemy()
 
 class UserRole(Enum):
-    USER = "user"           # Обычный пользователь
-    OPERATOR = "operator"   # Оператор call-центра
-    ADMIN = "admin"         # Администратор системы
+    USER = "user"
+    OPERATOR = "operator"
+    ADMIN = "admin"
 
 class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -24,11 +24,9 @@ class User(UserMixin, db.Model):
     last_login = db.Column(db.DateTime)
     is_active = db.Column(db.Boolean, default=True)
     
-    # Роли и права доступа
     role = db.Column(db.Enum(UserRole), default=UserRole.OPERATOR, nullable=False)
-    is_admin = db.Column(db.Boolean, default=False)  # Обратная совместимость
+    is_admin = db.Column(db.Boolean, default=False)
     
-    # Дополнительная информация
     full_name = db.Column(db.String(200))
     department = db.Column(db.String(100))
     phone = db.Column(db.String(20))
@@ -43,22 +41,18 @@ class User(UserMixin, db.Model):
     
     @property
     def is_administrator(self):
-        """Проверка на администратора"""
         return self.role == UserRole.ADMIN or self.is_admin
     
     @property
     def is_admin_property(self):
-        """Алиас для совместимости с Flask-Login"""
         return self.is_administrator
     
     @property
     def is_operator(self):
-        """Проверка на оператора"""
         return self.role == UserRole.OPERATOR
     
     @property
     def role_display(self):
-        """Человекочитаемое название роли"""
         role_names = {
             UserRole.USER: "Пользователь",
             UserRole.OPERATOR: "Оператор",
@@ -67,15 +61,12 @@ class User(UserMixin, db.Model):
         return role_names.get(self.role, "Неизвестно")
     
     def can_access_admin_panel(self):
-        """Может ли пользователь получить доступ к админ-панели"""
         return self.is_administrator
     
     def can_view_all_conversations(self):
-        """Может ли пользователь видеть все разговоры"""
         return self.is_administrator
     
     def can_manage_users(self):
-        """Может ли пользователь управлять пользователями"""
         return self.is_administrator
     
     def __repr__(self):
@@ -88,12 +79,8 @@ class Conversation(db.Model):
     filepath = db.Column(db.String(500), nullable=False)
     duration = db.Column(db.Integer)
     upload_date = db.Column(db.DateTime, default=datetime.utcnow)
-    
-    # Статус обработки
-    status = db.Column(db.String(50), default='pending')  # pending/transcribing/analyzing/completed/error
-    
-    # Метаданные файла
-    file_size = db.Column(db.Integer)  # Размер в байтах
+    status = db.Column(db.String(50), default='pending')
+    file_size = db.Column(db.Integer)
     mime_type = db.Column(db.String(100))
     
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
@@ -103,11 +90,12 @@ class Conversation(db.Model):
     def status_display(self):
         """Человекочитаемый статус"""
         status_names = {
+            'queued': '📋 В очереди',
             'pending': 'Ожидает обработки',
-            'transcribing': 'Транскрипция',
-            'analyzing': 'Анализ',
-            'completed': 'Завершено',
-            'error': 'Ошибка'
+            'transcribing': '📝 Транскрипция',
+            'analyzing': '🤖 Анализ',
+            'completed': '✅ Завершено',
+            'error': '❌ Ошибка'
         }
         return status_names.get(self.status, 'Неизвестно')
     
@@ -132,27 +120,23 @@ class Analysis(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     conversation_id = db.Column(db.Integer, db.ForeignKey('conversation.id'), nullable=False)
     
-    # Транскрипция
     transcript = db.Column(db.Text)
     
-    # Основной анализ
     topic = db.Column(db.String(100))
     category = db.Column(db.String(50))
     sentiment = db.Column(db.String(50))
     urgency = db.Column(db.String(50))
-    keywords = db.Column(db.Text)  # JSON
+    keywords = db.Column(db.Text)
     summary = db.Column(db.Text)
     
-    # Расширенный анализ
-    detailed_analysis = db.Column(db.Text)  # Подробный анализ
-    operator_quality = db.Column(db.String(50))  # Оценка работы оператора
-    recommendations = db.Column(db.Text)  # Рекомендации
+    detailed_analysis = db.Column(db.Text)
+    operator_quality = db.Column(db.String(50))
+    recommendations = db.Column(db.Text)
     
-    # Метрики качества
-    quality_score = db.Column(db.Float)  # Общая оценка от 0 до 10
-    response_time_rating = db.Column(db.String(20))  # Быстро/Средне/Медленно
-    politeness_rating = db.Column(db.String(20))  # Вежливо/Нейтрально/Грубо
-    problem_solved = db.Column(db.Boolean)  # Решена ли проблема клиента
+    quality_score = db.Column(db.Float)
+    response_time_rating = db.Column(db.String(20))
+    politeness_rating = db.Column(db.String(20))
+    problem_solved = db.Column(db.Boolean)
     
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     
@@ -160,10 +144,16 @@ class Analysis(db.Model):
     def sentiment_display(self):
         """Человекочитаемая тональность"""
         sentiment_names = {
+            # Английские варианты
             'positive': 'Позитивная',
             'negative': 'Негативная', 
             'neutral': 'Нейтральная',
-            'mixed': 'Смешанная'
+            'mixed': 'Смешанная',
+            # Русские варианты (из Gemini)
+            'позитивный': 'Позитивная',
+            'негативный': 'Негативная',
+            'нейтральный': 'Нейтральная',
+            'смешанный': 'Смешанная'
         }
         return sentiment_names.get(self.sentiment, 'Неопределено')
     
@@ -171,10 +161,16 @@ class Analysis(db.Model):
     def urgency_display(self):
         """Человекочитаемая срочность"""
         urgency_names = {
+            # Английские варианты
             'low': 'Низкая',
             'medium': 'Средняя',
             'high': 'Высокая',
-            'critical': 'Критическая'
+            'critical': 'Критическая',
+            # Русские варианты (из Gemini)
+            'низкая': 'Низкая',
+            'средняя': 'Средняя',
+            'высокая': 'Высокая',
+            'критическая': 'Критическая'
         }
         return urgency_names.get(self.urgency, 'Неопределено')
     
@@ -182,10 +178,7 @@ class Analysis(db.Model):
         return f'<Analysis for Conversation {self.conversation_id}>'
 
 
-# Дополнительные модели для расширенной функциональности
-
 class SystemSettings(db.Model):
-    """Настройки системы"""
     id = db.Column(db.Integer, primary_key=True)
     key = db.Column(db.String(100), unique=True, nullable=False)
     value = db.Column(db.Text)
@@ -195,11 +188,10 @@ class SystemSettings(db.Model):
 
 
 class AuditLog(db.Model):
-    """Логи действий пользователей"""
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-    action = db.Column(db.String(100), nullable=False)  # login, upload, view, etc.
-    details = db.Column(db.Text)  # JSON with additional info
+    action = db.Column(db.String(100), nullable=False)
+    details = db.Column(db.Text)
     ip_address = db.Column(db.String(45))
     user_agent = db.Column(db.String(500))
     timestamp = db.Column(db.DateTime, default=datetime.utcnow)

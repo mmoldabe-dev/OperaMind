@@ -1,6 +1,5 @@
 """
-OperaMind - Главное приложение v2
-Раздельная транскрипция и анализ
+OperaMind - Главное приложение с системой очередей
 """
 
 import os
@@ -14,11 +13,13 @@ from io import BytesIO
 from sqlalchemy import func
 
 from models import db, User, Conversation, Analysis
-from transcriber import transcribe_audio_file, transcribe_from_text
 from analyzer import analyze_transcript
 from stats import stats_bp
 from stats_user import stats_user_bp
 from admin import admin_bp
+
+# Система очередей
+from queue_handler import init_queue_system, add_to_queue, get_queue_status
 
 load_dotenv()
 
@@ -85,7 +86,8 @@ def logout():
 @app.route('/')
 @login_required
 def index():
-    return render_template('index.html')
+    queue_status = get_queue_status()
+    return render_template('index.html', queue_status=queue_status)
 
 @app.route('/upload', methods=['POST'])
 @login_required
@@ -107,112 +109,33 @@ def upload_file():
         filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
         
         file.save(filepath)
-        
-        # Получаем размер файла
         file_size = os.path.getsize(filepath)
         
-        # Создание записи
         conversation = Conversation(
             filename=filename,
             filepath=filepath,
             user_id=current_user.id,
-            status='pending',
+            status='queued',
             file_size=file_size
         )
         db.session.add(conversation)
         db.session.commit()
         
-        flash(f'✅ Файл загружен!', 'success')
+        is_text = filename.endswith('.txt')
+        add_to_queue(conversation.id, filepath, filename, is_text)
         
-        # ЭТАП 1: ТРАНСКРИПЦИЯ
-        print("\n" + "="*60)
-        print("ЭТАП 1: ТРАНСКРИПЦИЯ")
-        print("="*60)
-        
-        conversation.status = 'transcribing'
-        db.session.commit()
-        
-        try:
-            # Определяем тип файла
-            if filename.endswith('.txt'):
-                with open(filepath, 'r', encoding='utf-8') as f:
-                    structured_transcript = transcribe_from_text(f.read())
-                print("✅ Текст загружен из файла")
-            else:
-                structured_transcript = transcribe_audio_file(filepath)
-
-            if not structured_transcript:
-                raise Exception("Транскрипция не выполнена")
-
-            # Извлекаем длительность из метаданных
-            try:
-                data_tr = json.loads(structured_transcript)
-                if isinstance(data_tr, dict) and 'meta' in data_tr:
-                    conversation.duration = int(data_tr['meta'].get('duration_sec', 0))
-            except:
-                pass
-
-            # Попытка извлечь полный плоский текст
-            flat_text = None
-            try:
-                data_tr = json.loads(structured_transcript)
-                if isinstance(data_tr, dict) and 'text' in data_tr:
-                    flat_text = data_tr.get('text')
-                else:
-                    flat_text = structured_transcript
-            except Exception:
-                flat_text = structured_transcript
-            
-            # ЭТАП 2: АНАЛИЗ
-            print("\n" + "="*60)
-            print("ЭТАП 2: АНАЛИЗ ТЕКСТА")
-            print("="*60)
-            
-            conversation.status = 'analyzing'
-            db.session.commit()
-            
-            analysis_result = analyze_transcript(flat_text)
-            
-            # Сохранение результатов
-            analysis = Analysis(
-                conversation_id=conversation.id,
-                transcript=structured_transcript,
-                topic=analysis_result.get('topic'),
-                category=analysis_result.get('category'),
-                sentiment=analysis_result.get('sentiment'),
-                urgency=analysis_result.get('urgency'),
-                keywords=json.dumps(analysis_result.get('keywords', []), ensure_ascii=False),
-                summary=analysis_result.get('summary'),
-                detailed_analysis=analysis_result.get('detailed_analysis'),
-                operator_quality=analysis_result.get('operator_quality'),
-                recommendations=analysis_result.get('recommendations')
-            )
-            
-            conversation.status = 'completed'
-            db.session.add(analysis)
-            db.session.commit()
-            
-            flash('🎉 Обработка завершена!', 'success')
-            
-        except Exception as e:
-            print(f"❌ Ошибка: {e}")
-            conversation.status = 'error'
-            db.session.commit()
-            flash(f'❌ Ошибка обработки: {str(e)}', 'error')
-        
+        flash('Файл добавлен в очередь обработки!', 'success')
         return redirect(url_for('conversation_detail', conversation_id=conversation.id))
     else:
-        flash('❌ Недопустимый формат. Разрешены: MP3, WAV, M4A, OGG, TXT', 'error')
+        flash('Недопустимый формат. Разрешены: MP3, WAV, M4A, OGG, TXT', 'error')
         return redirect(url_for('index'))
 
 @app.route('/history')
 @login_required
 def history():
-    # Пагинация
     page = request.args.get('page', 1, type=int)
     per_page = 25
     
-    # Фильтры
     status_filter = request.args.get('status', '')
     search_query = request.args.get('search', '')
     
@@ -228,38 +151,57 @@ def history():
         page=page, per_page=per_page, error_out=False
     )
     
-    return render_template('history.html', conversations=conversations)
+    queue_status = get_queue_status()
+    
+    return render_template('history.html', conversations=conversations, queue_status=queue_status)
 
 @app.route('/conversation/<int:conversation_id>')
 @login_required
 def conversation_detail(conversation_id):
     conversation = Conversation.query.get_or_404(conversation_id)
-    # Доступ: владелец или админ
     if conversation.user_id != current_user.id and not getattr(current_user, 'is_admin', False):
-        flash('❌ Нет доступа', 'error')
+        flash('Нет доступа', 'error')
         return redirect(url_for('history'))
-    return render_template('conversation_detail.html', conversation=conversation)
+    
+    queue_status = get_queue_status()
+    
+    return render_template('conversation_detail.html', conversation=conversation, queue_status=queue_status)
+
+@app.route('/api/queue/status')
+@login_required
+def api_queue_status():
+    return jsonify(get_queue_status())
+
+@app.route('/api/conversation/<int:conversation_id>/status')
+@login_required
+def api_conversation_status(conversation_id):
+    conversation = Conversation.query.get_or_404(conversation_id)
+    if conversation.user_id != current_user.id and not getattr(current_user, 'is_admin', False):
+        return jsonify({'error': 'Нет доступа'}), 403
+    
+    return jsonify({
+        'id': conversation.id,
+        'status': conversation.status,
+        'status_display': conversation.status_display,
+        'has_analysis': conversation.analysis is not None
+    })
 
 @app.route('/download/<int:conversation_id>')
 @login_required
 def download_report(conversation_id):
-    """Скачать отчёт по разговору"""
     conversation = Conversation.query.get_or_404(conversation_id)
     
-    # Проверка доступа
     if conversation.user_id != current_user.id and not getattr(current_user, 'is_admin', False):
-        flash('❌ Нет доступа', 'error')
+        flash('Нет доступа', 'error')
         return redirect(url_for('history'))
     
     if not conversation.analysis:
-        flash('❌ Анализ не выполнен', 'error')
+        flash('Анализ не выполнен', 'error')
         return redirect(url_for('conversation_detail', conversation_id=conversation_id))
     
-    # Формируем отчёт
     a = conversation.analysis
     keywords = json.loads(a.keywords) if a.keywords else []
     
-    # Попытка преобразовать структурированную транскрипцию
     pretty_transcript = a.transcript
     try:
         data_t = json.loads(a.transcript)
@@ -271,16 +213,16 @@ def download_report(conversation_id):
                 start = seg.get('start', 0)
                 end = seg.get('end', 0)
                 text_line = seg.get('text', '')
-                lines.append(f"[{start:06.2f}—{end:06.2f}] {role}: {text_line}")
+                lines.append(f"[{start:06.2f}–{end:06.2f}] {role}: {text_line}")
             pretty_transcript = "\n".join(lines)
-    except Exception:
+    except:
         pass
 
     report = f"""
-╔══════════════════════════════════════════════════════════════════╗
+╔═══════════════════════════════════════════════════════════╗
 ║                    ОТЧЁТ ПО РАЗГОВОРУ                            ║
 ║                      OperaMind v2.0                              ║
-╚══════════════════════════════════════════════════════════════════╝
+╚═══════════════════════════════════════════════════════════╝
 
 ФАЙЛ: {conversation.filename}
 ДАТА: {conversation.upload_date.strftime('%d.%m.%Y %H:%M')}
@@ -332,9 +274,8 @@ def download_report(conversation_id):
 {datetime.now().strftime('%d.%m.%Y %H:%M:%S')}
 """
     
-    # Создаём файл в памяти
     output = BytesIO()
-    output.write(report.encode('utf-8-sig'))  # BOM для правильного отображения в Windows
+    output.write(report.encode('utf-8-sig'))
     output.seek(0)
     
     filename = f'report_{conversation.id}_{datetime.now().strftime("%Y%m%d_%H%M%S")}.txt'
@@ -352,7 +293,7 @@ def delete_conversation(conversation_id):
     conversation = Conversation.query.get_or_404(conversation_id)
     
     if conversation.user_id != current_user.id and not getattr(current_user, 'is_admin', False):
-        flash('❌ Нет доступа', 'error')
+        flash('Нет доступа', 'error')
         return redirect(url_for('history'))
     
     if os.path.exists(conversation.filepath):
@@ -361,45 +302,36 @@ def delete_conversation(conversation_id):
     db.session.delete(conversation)
     db.session.commit()
     
-    flash('🗑️ Разговор удалён', 'success')
+    flash('Разговор удалён', 'success')
     return redirect(url_for('history'))
-
-# ======= НОВЫЕ ФУНКЦИИ ИЗ ROADMAP =======
 
 @app.route('/stats')
 @login_required
 def user_stats():
-    """Персональная статистика пользователя"""
     user_id = current_user.id
     
-    # Общая статистика
     total = Conversation.query.filter_by(user_id=user_id).count()
     completed = Conversation.query.filter_by(user_id=user_id, status='completed').count()
     errors = Conversation.query.filter_by(user_id=user_id, status='error').count()
     processing = total - completed - errors
     
-    # Средняя длительность
     avg_duration = db.session.query(func.avg(Conversation.duration)).filter_by(user_id=user_id).scalar() or 0
     
-    # Тональность
     sentiments = db.session.query(Analysis.sentiment, func.count()).join(Conversation).filter(
         Conversation.user_id == user_id
     ).group_by(Analysis.sentiment).all()
     sentiment_stats = {s or 'неопределено': c for s, c in sentiments}
     
-    # Срочность
     urgencies = db.session.query(Analysis.urgency, func.count()).join(Conversation).filter(
         Conversation.user_id == user_id
     ).group_by(Analysis.urgency).all()
     urgency_stats = {u or 'неопределено': c for u, c in urgencies}
     
-    # Категории
     categories = db.session.query(Analysis.category, func.count()).join(Conversation).filter(
         Conversation.user_id == user_id
     ).group_by(Analysis.category).all()
     category_stats = {c or 'неопределено': n for c, n in categories}
     
-    # Топ ключевые слова
     kw_rows = db.session.query(Analysis.keywords).join(Conversation).filter(
         Conversation.user_id == user_id,
         Analysis.keywords.isnot(None)
@@ -415,9 +347,7 @@ def user_stats():
     
     top_keywords = [w for w, _ in Counter(all_keywords).most_common(10)]
     
-    # Активность по дням недели
     from collections import defaultdict
-    import calendar
     
     calls_by_weekday = defaultdict(int)
     convs = Conversation.query.filter_by(user_id=user_id).all()
@@ -427,6 +357,8 @@ def user_stats():
     
     weekday_labels = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс']
     weekday_data = [calls_by_weekday.get(i, 0) for i in range(7)]
+    
+    queue_status = get_queue_status()
     
     return render_template('user_stats.html',
         total=total,
@@ -439,27 +371,24 @@ def user_stats():
         categories=category_stats,
         top_keywords=top_keywords,
         weekday_labels=weekday_labels,
-        weekday_data=weekday_data
+        weekday_data=weekday_data,
+        queue_status=queue_status
     )
 
 @app.route('/admin/analytics')
 @login_required
 def admin_analytics():
-    """Глобальная аналитика для администратора"""
     if not getattr(current_user, 'is_admin', False):
         flash('Нет доступа', 'error')
         return redirect(url_for('index'))
     
-    # Общая статистика
     total = Conversation.query.count()
     completed = Conversation.query.filter_by(status='completed').count()
     errors = Conversation.query.filter_by(status='error').count()
     processing = total - completed - errors
     
-    # Средняя длительность
     avg_duration = db.session.query(func.avg(Conversation.duration)).scalar() or 0
     
-    # Статистика по пользователям
     user_stats = db.session.query(
         User.username,
         func.count(Conversation.id).label('total'),
@@ -467,19 +396,15 @@ def admin_analytics():
         func.sum(func.cast(Conversation.status == 'error', db.Integer)).label('errors')
     ).join(Conversation).group_by(User.id).all()
     
-    # Тональность (глобально)
     sentiments = db.session.query(Analysis.sentiment, func.count()).group_by(Analysis.sentiment).all()
     sentiment_stats = {s or 'неопределено': c for s, c in sentiments}
     
-    # Срочность (глобально)
     urgencies = db.session.query(Analysis.urgency, func.count()).group_by(Analysis.urgency).all()
     urgency_stats = {u or 'неопределено': c for u, c in urgencies}
     
-    # Категории (глобально)
     categories = db.session.query(Analysis.category, func.count()).group_by(Analysis.category).all()
     category_stats = {c or 'неопределено': n for c, n in categories}
     
-    # Топ ключевые слова (глобально)
     kw_rows = db.session.query(Analysis.keywords).filter(Analysis.keywords.isnot(None)).all()
     
     from collections import Counter
@@ -492,9 +417,7 @@ def admin_analytics():
     
     top_keywords = [w for w, _ in Counter(all_keywords).most_common(15)]
     
-    # Активность по дням
     from collections import defaultdict
-    import calendar
     
     calls_by_weekday = defaultdict(int)
     convs = Conversation.query.all()
@@ -504,6 +427,8 @@ def admin_analytics():
     
     weekday_labels = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс']
     weekday_data = [calls_by_weekday.get(i, 0) for i in range(7)]
+    
+    queue_status = get_queue_status()
     
     return render_template('admin_analytics.html',
         total=total,
@@ -517,7 +442,8 @@ def admin_analytics():
         categories=category_stats,
         top_keywords=top_keywords,
         weekday_labels=weekday_labels,
-        weekday_data=weekday_data
+        weekday_data=weekday_data,
+        queue_status=queue_status
     )
 
 app.register_blueprint(stats_bp)
@@ -525,4 +451,9 @@ app.register_blueprint(stats_user_bp)
 app.register_blueprint(admin_bp)
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    with app.app_context():
+        db.create_all()
+        num_workers = int(os.getenv('QUEUE_WORKERS', '2'))
+        init_queue_system(app, num_workers=num_workers)
+    
+    app.run(debug=True, threaded=True)

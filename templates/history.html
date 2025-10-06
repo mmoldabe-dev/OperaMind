@@ -42,7 +42,7 @@
             </thead>
             <tbody>
                 {% for conv in conversations.items %}
-                <tr>
+                <tr data-conversation-id="{{ conv.id }}">
                     <td style="font-size:var(--font-size-xs);color:var(--gray-500);">{{ conv.id }}</td>
                     <td style="font-weight:600;">{{ conv.filename }}</td>
                     <td style="font-size:var(--font-size-xs);white-space:nowrap;">{{ conv.upload_date.strftime('%d.%m.%Y %H:%M') }}</td>
@@ -129,6 +129,7 @@
         font-weight:600; 
         color:var(--white); 
     }
+    .status-queued { background:#ff9800; }
     .status-completed { background:var(--success); }
     .status-error { background:var(--error); }
     .status-transcribing { background:var(--info); }
@@ -142,11 +143,60 @@
         font-size:var(--font-size-xs); 
         font-weight:600; 
     }
-    .urgency-низкая { background:var(--success); color:var(--white); }
-    .urgency-средняя { background:var(--info); color:var(--white); }
-    .urgency-высокая { background:var(--warning); color:var(--white); }
-    .urgency-критическая { background:var(--error); color:var(--white); }
-    .urgency-none { background:var(--gray-300); color:var(--gray-600); }
+    .urgency-низкая, .urgency-low { background:#4caf50; color:white; }
+    .urgency-средняя, .urgency-medium { background:#2196f3; color:white; }
+    .urgency-высокая, .urgency-high { background:#ff9800; color:white; }
+    .urgency-критическая, .urgency-critical { background:#f44336; color:white; }
+    .urgency-none, .urgency-unknown { background:var(--gray-300); color:var(--gray-600); }
+
+    .status-updated {
+        animation: highlight 2s ease-in-out;
+    }
+
+    @keyframes highlight {
+        0%, 100% { background-color: transparent; }
+        50% { background-color: rgba(76, 175, 80, 0.2); }
+    }
 </style>
+
+<script>
+// Автообновление статусов в таблице истории
+function updateAllConversationStatuses() {
+    const rows = document.querySelectorAll('tr[data-conversation-id]');
+    
+    rows.forEach(row => {
+        const convId = row.dataset.conversationId;
+        
+        fetch(`/api/conversation/${convId}/status`)
+            .then(response => response.json())
+            .then(data => {
+                const statusChip = row.querySelector('.status-chip');
+                const urgencyChip = row.querySelector('.urgency-chip');
+                
+                // Обновляем статус
+                if (statusChip && statusChip.textContent.trim() !== data.status_display) {
+                    statusChip.textContent = data.status_display;
+                    statusChip.className = `status-chip status-${data.status}`;
+                    
+                    // Подсвечиваем строку при завершении
+                    if (data.status === 'completed') {
+                        row.classList.add('status-updated');
+                        setTimeout(() => row.classList.remove('status-updated'), 2000);
+                        
+                        // Перезагружаем страницу через 2 сек для отображения срочности
+                        setTimeout(() => location.reload(), 2000);
+                    }
+                }
+            })
+            .catch(err => console.error('Ошибка обновления:', err));
+    });
+}
+
+// Обновляем каждые 3 секунды
+setInterval(updateAllConversationStatuses, 3000);
+
+// Первое обновление сразу
+updateAllConversationStatuses();
+</script>
 
 {% endblock %}

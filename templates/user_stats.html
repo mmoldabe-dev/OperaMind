@@ -30,7 +30,7 @@
         </div>
     </div>
 
-    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:var(--space-6);">
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:var(--space-6);margin-bottom:var(--space-6);">
         
         <div class="card" style="padding:var(--space-6);margin:0;">
             <h3 style="font-size:var(--font-size-lg);margin-bottom:var(--space-4);display:flex;align-items:center;gap:var(--space-2);">
@@ -120,23 +120,163 @@
         </div>
     </div>
 
-    <div class="card" style="margin-top:var(--space-6);padding:var(--space-6);">
-        <h3 style="font-size:var(--font-size-lg);margin-bottom:var(--space-4);display:flex;align-items:center;gap:var(--space-2);">
-            <i class="fas fa-calendar-week" style="color:var(--primary);"></i> Активность по дням недели
-        </h3>
-        <div style="display:flex;align-items:flex-end;gap:12px;height:150px;">
-            {% set max_val = weekday_data|max if weekday_data else 1 %}
-            {% for i in range(7) %}
-            {% set val = weekday_data[i] %}
-            {% set height = ((val / max_val) * 100) if max_val > 0 else 0 %}
-            <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:6px;">
-                <div style="width:100%;background:linear-gradient(135deg,var(--primary),var(--secondary));border-radius:4px;height:{{ height }}%;min-height:4px;transition:height .3s;"></div>
-                <div style="font-size:10px;color:var(--gray-600);font-weight:600;">{{ weekday_labels[i] }}</div>
-                <div style="font-size:11px;color:var(--gray-500);">{{ val }}</div>
+    <!-- НОВЫЕ ГРАФИКИ АКТИВНОСТИ -->
+    {% if activity %}
+    <div class="card" style="padding:var(--space-6);margin-bottom:var(--space-6);">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:var(--space-4);flex-wrap:wrap;gap:var(--space-3);">
+            <h3 style="font-size:var(--font-size-xl);display:flex;align-items:center;gap:var(--space-2);margin:0;">
+                <i class="fas fa-chart-bar" style="color:var(--primary);"></i> Активность
+            </h3>
+            <div style="display:flex;gap:var(--space-2);flex-wrap:wrap;">
+                <button onclick="showChart('weekday')" id="btn-weekday" class="chart-btn active">Неделя</button>
+                <button onclick="showChart('weeks')" id="btn-weeks" class="chart-btn">12 недель</button>
+                <button onclick="showChart('months')" id="btn-months" class="chart-btn">12 месяцев</button>
+                <button onclick="showChart('years')" id="btn-years" class="chart-btn">5 лет</button>
             </div>
-            {% endfor %}
+        </div>
+
+        <!-- График по дням недели -->
+        <div id="chart-weekday" class="activity-chart">
+            <div style="display:flex;align-items:flex-end;gap:12px;height:200px;">
+                {% set max_val = activity.weekday.data|max if activity.weekday.data else 1 %}
+                {% for i in range(7) %}
+                {% set val = activity.weekday.data[i] %}
+                {% set height = ((val / max_val) * 100) if max_val > 0 else 0 %}
+                <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:6px;">
+                    <div style="width:100%;background:linear-gradient(135deg,var(--primary),var(--secondary));border-radius:6px;height:{{ height }}%;min-height:6px;transition:all .3s;box-shadow:var(--shadow-sm);cursor:pointer;" 
+                         onmouseover="this.style.transform='translateY(-4px)';this.style.boxShadow='var(--shadow-md)'" 
+                         onmouseout="this.style.transform='';this.style.boxShadow='var(--shadow-sm)'"></div>
+                    <div style="font-size:11px;color:var(--gray-700);font-weight:700;">{{ activity.weekday.labels[i] }}</div>
+                    <div style="font-size:13px;color:var(--gray-600);font-weight:600;">{{ val }}</div>
+                </div>
+                {% endfor %}
+            </div>
+            <div style="text-align:center;margin-top:var(--space-4);color:var(--gray-500);font-size:var(--font-size-sm);">
+                <i class="fas fa-info-circle"></i> Текущая неделя
+            </div>
+        </div>
+
+        <!-- График 12 недель -->
+        <div id="chart-weeks" class="activity-chart" style="display:none;">
+            <div style="display:flex;align-items:flex-end;gap:6px;height:200px;overflow-x:auto;padding-bottom:10px;">
+                {% set max_val = activity.weeks.data|max if activity.weeks.data else 1 %}
+                {% for i in range(activity.weeks.data|length) %}
+                {% set val = activity.weeks.data[i] %}
+                {% set height = ((val / max_val) * 100) if max_val > 0 else 0 %}
+                <div style="min-width:40px;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:4px;">
+                    <div style="width:100%;background:linear-gradient(135deg,var(--accent),var(--info));border-radius:4px;height:{{ height }}%;min-height:4px;transition:all .3s;cursor:pointer;"
+                         onmouseover="this.style.transform='translateY(-4px)'" 
+                         onmouseout="this.style.transform=''"></div>
+                    <div style="font-size:9px;color:var(--gray-600);font-weight:600;">{{ activity.weeks.labels[i] }}</div>
+                    <div style="font-size:10px;color:var(--gray-500);">{{ val }}</div>
+                </div>
+                {% endfor %}
+            </div>
+            <div style="text-align:center;margin-top:var(--space-4);color:var(--gray-500);font-size:var(--font-size-sm);">
+                <i class="fas fa-calendar-alt"></i> Последние 12 недель
+            </div>
+        </div>
+
+        <!-- График 12 месяцев -->
+        <div id="chart-months" class="activity-chart" style="display:none;">
+            <div style="display:flex;align-items:flex-end;gap:8px;height:200px;">
+                {% set max_val = activity.months.data|max if activity.months.data else 1 %}
+                {% for i in range(activity.months.data|length) %}
+                {% set val = activity.months.data[i] %}
+                {% set height = ((val / max_val) * 100) if max_val > 0 else 0 %}
+                <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:4px;">
+                    <div style="width:100%;background:linear-gradient(135deg,var(--success),#059669);border-radius:4px;height:{{ height }}%;min-height:4px;transition:all .3s;cursor:pointer;"
+                         onmouseover="this.style.transform='scale(1.05)'" 
+                         onmouseout="this.style.transform=''"></div>
+                    <div style="font-size:10px;color:var(--gray-600);font-weight:600;">{{ activity.months.labels[i] }}</div>
+                    <div style="font-size:11px;color:var(--gray-500);">{{ val }}</div>
+                </div>
+                {% endfor %}
+            </div>
+            <div style="text-align:center;margin-top:var(--space-4);color:var(--gray-500);font-size:var(--font-size-sm);">
+                <i class="fas fa-calendar"></i> Последние 12 месяцев
+            </div>
+        </div>
+
+        <!-- График 5 лет -->
+        <div id="chart-years" class="activity-chart" style="display:none;">
+            <div style="display:flex;align-items:flex-end;gap:16px;height:200px;justify-content:center;">
+                {% set max_val = activity.years.data|max if activity.years.data else 1 %}
+                {% for i in range(activity.years.data|length) %}
+                {% set val = activity.years.data[i] %}
+                {% set height = ((val / max_val) * 100) if max_val > 0 else 0 %}
+                <div style="width:80px;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:6px;">
+                    <div style="width:100%;background:linear-gradient(135deg,var(--warning),#d97706);border-radius:8px;height:{{ height }}%;min-height:6px;transition:all .3s;cursor:pointer;box-shadow:var(--shadow);"
+                         onmouseover="this.style.transform='translateY(-6px)';this.style.boxShadow='var(--shadow-lg)'" 
+                         onmouseout="this.style.transform='';this.style.boxShadow='var(--shadow)'"></div>
+                    <div style="font-size:12px;color:var(--gray-700);font-weight:700;">{{ activity.years.labels[i] }}</div>
+                    <div style="font-size:14px;color:var(--gray-600);font-weight:600;">{{ val }}</div>
+                </div>
+                {% endfor %}
+            </div>
+            <div style="text-align:center;margin-top:var(--space-4);color:var(--gray-500);font-size:var(--font-size-sm);">
+                <i class="fas fa-history"></i> Последние 5 лет
+            </div>
         </div>
     </div>
+    {% endif %}
 </div>
+
+<style>
+.chart-btn {
+    padding: var(--space-2) var(--space-4);
+    border: 2px solid var(--gray-300);
+    background: var(--white);
+    border-radius: var(--radius-md);
+    font-size: var(--font-size-xs);
+    font-weight: 600;
+    color: var(--gray-600);
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.chart-btn:hover {
+    border-color: var(--primary);
+    color: var(--primary);
+    transform: translateY(-1px);
+}
+
+.chart-btn.active {
+    background: var(--primary);
+    color: var(--white);
+    border-color: var(--primary);
+}
+
+.activity-chart {
+    animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+</style>
+
+<script>
+function showChart(type) {
+    // Скрываем все графики
+    document.querySelectorAll('.activity-chart').forEach(el => el.style.display = 'none');
+    
+    // Убираем active у всех кнопок
+    document.querySelectorAll('.chart-btn').forEach(btn => btn.classList.remove('active'));
+    
+    // Показываем нужный график
+    const chart = document.getElementById('chart-' + type);
+    if (chart) {
+        chart.style.display = 'block';
+    }
+    
+    // Активируем кнопку
+    const btn = document.getElementById('btn-' + type);
+    if (btn) {
+        btn.classList.add('active');
+    }
+}
+</script>
 
 {% endblock %}
